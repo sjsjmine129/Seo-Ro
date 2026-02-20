@@ -50,7 +50,7 @@ export default function LibraryFilter({ libraries, selectedId }: Props) {
 	return (
 		<div
 			ref={containerRef}
-			className="sticky top-4 z-40 mb-6 flex flex-col items-center"
+			className="sticky top-4 z-40 mb-6 px-1 flex flex-col items-center"
 		>
 			<button
 				type="button"

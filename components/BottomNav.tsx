@@ -26,7 +26,7 @@ export default function BottomNav() {
 			aria-label="Bottom navigation"
 		>
 			{/* Glassmorphism bar: bg-white/90 backdrop-blur-md border-white/40 */}
-			<div className="relative mx-auto flex h-16 w-full max-w-lg items-center justify-around border-t border-white/40 bg-white/90 px-2 backdrop-blur-md">
+			<div className="relative mx-auto flex h-16 rounded-t-2xl w-full max-w-lg items-center justify-around border-t border-white/40 bg-white/90 px-2 backdrop-blur-md">
 				{NAV_ITEMS.map((item) => {
 					if (item.isFab) {
 						return (

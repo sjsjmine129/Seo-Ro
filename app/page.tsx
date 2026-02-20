@@ -146,7 +146,7 @@ export default async function Home({
 
 	return (
 		<>
-			<main className="flex min-h-screen flex-col px-4 pb-32 pt-4">
+			<main className="flex min-h-screen items-start flex-col px-4 pb-32 pt-4">
 				<LibraryFilter libraries={libraries} selectedId={selectedId} />
 
 				{errorMessage ? (
