@@ -3,26 +3,31 @@ import BottomNav from "@/components/BottomNav";
 import LibraryFilter from "@/components/LibraryFilter";
 import { BookOpen } from "lucide-react";
 import Link from "next/link";
-
-const MOCK_USER_ID = "11111111-1111-1111-1111-111111111111";
+import { redirect } from "next/navigation";
 
 type Library = { id: string; name: string };
 
 async function getUserLibraries(
-	supabase: Awaited<ReturnType<typeof import("@/utils/supabase/server").createClient>>,
+	supabase: Awaited<
+		ReturnType<typeof import("@/utils/supabase/server").createClient>
+	>,
+	userId: string,
 ): Promise<Library[]> {
-	console.log("[getUserLibraries] MOCK_USER_ID:", MOCK_USER_ID);
+	console.log("[getUserLibraries] userId:", userId);
 
 	const { data, error } = await supabase
 		.from("user_interested_libraries")
 		.select("library_id, libraries (id, name)")
-		.eq("user_id", MOCK_USER_ID);
+		.eq("user_id", userId);
 
 	if (error) {
 		console.error("[getUserLibraries] Error:", error);
 		return [];
 	}
-	console.log("[getUserLibraries] Raw data from user_interested_libraries:", JSON.stringify(data, null, 2));
+	console.log(
+		"[getUserLibraries] Raw data from user_interested_libraries:",
+		JSON.stringify(data, null, 2),
+	);
 
 	const libraries = (data ?? []).map((row: Record<string, unknown>) => {
 		const lib = row.libraries;
@@ -40,11 +45,18 @@ async function getUserLibraries(
 }
 
 async function getBooks(
-	supabase: Awaited<ReturnType<typeof import("@/utils/supabase/server").createClient>>,
+	supabase: Awaited<
+		ReturnType<typeof import("@/utils/supabase/server").createClient>
+	>,
 	libraryId: string | undefined,
 	userLibraryIds: string[],
 ) {
-	console.log("[getBooks] libraryId:", libraryId, "userLibraryIds:", userLibraryIds);
+	console.log(
+		"[getBooks] libraryId:",
+		libraryId,
+		"userLibraryIds:",
+		userLibraryIds,
+	);
 
 	const baseSelect =
 		"id, title, authors, thumbnail_url, condition, user_review, users!owner_id(nickname, bookshelf_score)";
@@ -79,7 +91,10 @@ async function getBooks(
 		console.error("[getBooks] Error:", error);
 		throw error;
 	}
-	console.log("[getBooks] Raw data from books:", JSON.stringify(data, null, 2));
+	console.log(
+		"[getBooks] Raw data from books:",
+		JSON.stringify(data, null, 2),
+	);
 
 	// Dedupe by book id (a book can appear in multiple book_libraries rows)
 	const seen = new Set<string>();
@@ -96,6 +111,14 @@ export default async function Home({
 	searchParams: Promise<{ libraryId?: string }>;
 }) {
 	const supabase = await createClient();
+	const {
+		data: { user },
+	} = await supabase.auth.getUser();
+
+	if (!user) {
+		redirect("/login");
+	}
+
 	const searchParamsResolved = await searchParams;
 	const { libraryId } = searchParamsResolved;
 	console.log("[Home] Resolved searchParams:", searchParamsResolved);
@@ -105,8 +128,12 @@ export default async function Home({
 	let errorMessage: string | null = null;
 
 	try {
-		libraries = await getUserLibraries(supabase);
-		books = await getBooks(supabase, libraryId, libraries.map((l) => l.id));
+		libraries = await getUserLibraries(supabase, user.id);
+		books = await getBooks(
+			supabase,
+			libraryId,
+			libraries.map((l) => l.id),
+		);
 	} catch (err) {
 		console.error("[Home] Caught error (full object):", err);
 		errorMessage =
@@ -129,7 +156,8 @@ export default async function Home({
 				) : books.length === 0 ? (
 					<div className="flex flex-col items-center justify-center gap-4 py-16 text-center">
 						<p className="text-foreground/70">
-							No books shelved here yet. Be the first!
+							도서관에 등록된 책이 아직 없어요. 제일 먼저 책을
+							등록해 보세요!
 						</p>
 						<Link
 							href="/shelve"
