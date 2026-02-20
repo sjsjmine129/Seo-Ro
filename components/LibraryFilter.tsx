@@ -8,9 +8,14 @@ type Library = { id: string; name: string };
 type Props = {
 	libraries: Library[];
 	selectedId: string | null;
+	selectedLibraryName?: string | null;
 };
 
-export default function LibraryFilter({ libraries, selectedId }: Props) {
+export default function LibraryFilter({
+	libraries,
+	selectedId,
+	selectedLibraryName,
+}: Props) {
 	const router = useRouter();
 	const containerRef = useRef<HTMLDivElement>(null);
 	const [isOpen, setIsOpen] = useState(false);
@@ -32,8 +37,9 @@ export default function LibraryFilter({ libraries, selectedId }: Props) {
 	const displayLabel =
 		!selectedId || selectedId === "all"
 			? "내 관심 도서관"
-			: (libraries.find((l) => l.id === selectedId)?.name ??
-				"내 관심 도서관");
+			: selectedLibraryName ??
+				libraries.find((l) => l.id === selectedId)?.name ??
+				"내 관심 도서관";
 
 	const handleSelect = (libraryId: string) => {
 		setIsOpen(false);
@@ -50,7 +56,7 @@ export default function LibraryFilter({ libraries, selectedId }: Props) {
 	return (
 		<div
 			ref={containerRef}
-			className="sticky top-4 z-40 mb-6 px-1 flex flex-col items-center"
+			className="sticky top-4 z-40 mb-6 px-1 flex flex-col items-start"
 		>
 			<button
 				type="button"

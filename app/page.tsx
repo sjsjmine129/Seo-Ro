@@ -44,6 +44,20 @@ async function getUserLibraries(
 	return libraries;
 }
 
+async function getLibraryName(
+	supabase: Awaited<
+		ReturnType<typeof import("@/utils/supabase/server").createClient>
+	>,
+	libraryId: string,
+): Promise<string | null> {
+	const { data } = await supabase
+		.from("libraries")
+		.select("name")
+		.eq("id", libraryId)
+		.single();
+	return data?.name ?? null;
+}
+
 async function getBooks(
 	supabase: Awaited<
 		ReturnType<typeof import("@/utils/supabase/server").createClient>
@@ -125,10 +139,14 @@ export default async function Home({
 
 	let libraries: Library[] = [];
 	let books: Awaited<ReturnType<typeof getBooks>> = [];
+	let selectedLibraryName: string | null = null;
 	let errorMessage: string | null = null;
 
 	try {
 		libraries = await getUserLibraries(supabase, user.id);
+		if (libraryId && libraryId !== "all") {
+			selectedLibraryName = await getLibraryName(supabase, libraryId);
+		}
 		books = await getBooks(
 			supabase,
 			libraryId,
@@ -146,8 +164,12 @@ export default async function Home({
 
 	return (
 		<>
-			<main className="flex min-h-screen items-start flex-col px-4 pb-32 pt-4">
-				<LibraryFilter libraries={libraries} selectedId={selectedId} />
+			<main className="flex min-h-screen flex-col px-4 pb-32 pt-4">
+				<LibraryFilter
+					libraries={libraries}
+					selectedId={selectedId}
+					selectedLibraryName={selectedLibraryName}
+				/>
 
 				{errorMessage ? (
 					<div className="rounded-2xl border border-red-200 bg-red-50/80 p-4 text-center text-sm text-red-700">
@@ -163,7 +185,7 @@ export default async function Home({
 							href="/shelve"
 							className="rounded-full bg-primary px-6 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
 						>
-							Shelve Book
+							교환할 책 꽂기
 						</Link>
 					</div>
 				) : (
