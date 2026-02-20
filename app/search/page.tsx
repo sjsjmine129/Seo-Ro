@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
+import Link from "next/link";
 import { Library, MapPin } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import BottomNav from "@/components/BottomNav";
@@ -274,10 +275,11 @@ export default function SearchPage() {
 				{showResults && results.length > 0 && (
 					<ul className="flex flex-col gap-3 pb-4">
 						{results.map((lib) => (
-							<li
-								key={lib.id}
-								className="rounded-2xl border border-white/40 bg-white/90 p-4 shadow-sm backdrop-blur-md"
-							>
+							<li key={lib.id}>
+								<Link
+									href={`/library/${lib.id}`}
+									className="block rounded-2xl border border-white/40 bg-white/90 p-4 shadow-sm backdrop-blur-md transition-opacity hover:opacity-90"
+								>
 								<h3 className="font-semibold text-foreground">
 									{lib.name}
 								</h3>
@@ -296,6 +298,7 @@ export default function SearchPage() {
 										km
 									</p>
 								)}
+								</Link>
 							</li>
 						))}
 						<div ref={loadMoreRef} className="h-4" />
