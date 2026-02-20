@@ -1,26 +1,25 @@
 @import "tailwindcss";
 
+/* Seo-Ro "Frosted Paper" design system (UI_SPECS.md) */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #F9F5EB;   /* Warm Beige */
+  --foreground: #1a1a1a;
+  --primary: #2F5233;      /* Forest Green */
+  --accent: #C15B46;       /* Terracotta */
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-accent: var(--accent);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+/* Frosted Paper glassmorphism: use with bg-white/90 backdrop-blur-md border border-white/40 */
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
 }
