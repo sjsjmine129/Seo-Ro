@@ -2,6 +2,7 @@ import { createClient } from "@/utils/supabase/server";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { MapPin, ChevronRight, BookOpen } from "lucide-react";
+import NaverMap from "@/components/NaverMap";
 import BottomNav from "@/components/BottomNav";
 import LibraryDetailClient from "./LibraryDetailClient";
 import { addInterest, removeInterest } from "./actions";
@@ -106,16 +107,11 @@ export default async function LibraryDetailPage({
 	return (
 		<>
 			<div className="flex min-h-screen flex-col bg-background px-4 pb-36 pt-6">
-				{/* Map placeholder */}
-				<div className="mb-4 flex h-[200px] items-center justify-center overflow-hidden rounded-2xl border border-white/40 bg-white/60">
-					<div className="flex flex-col items-center gap-2 text-foreground/50">
-						<MapPin className="h-12 w-12" strokeWidth={1.5} />
-						<span className="text-sm">
-							위도 {Number(library.lat).toFixed(4)}, 경도{" "}
-							{Number(library.lng).toFixed(4)}
-						</span>
-					</div>
-				</div>
+				<NaverMap
+					lat={Number(library.lat)}
+					lng={Number(library.lng)}
+					libraryName={library.name}
+				/>
 
 				{/* Header */}
 				<h1 className="text-xl font-bold text-foreground">
