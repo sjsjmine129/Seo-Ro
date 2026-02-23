@@ -106,7 +106,7 @@ export default async function LibraryDetailPage({
 
 	return (
 		<>
-			<div className="flex min-h-screen flex-col bg-background px-4 pb-36 pt-6">
+			<div className="flex min-h-screen flex-col bg-background px-4 pb-40 pt-6">
 				<NaverMap
 					lat={Number(library.lat)}
 					lng={Number(library.lng)}
@@ -205,13 +205,21 @@ export default async function LibraryDetailPage({
 			</div>
 
 			{/* Floating bottom button - above BottomNav */}
-			<Link
-				href={homeUrl}
-				className="fixed left-0 right-0 z-40 flex items-center justify-center bg-primary py-4 text-base font-semibold text-white shadow-lg transition-opacity hover:opacity-90"
-				style={{ bottom: "calc(65px + env(safe-area-inset-bottom))" }}
+			<div
+				className="fixed left-0 right-0 z-40 px-4"
+				style={{
+					bottom: "calc(65px + 16px + env(safe-area-inset-bottom))",
+				}}
 			>
-				해당 도서관에 꽂힌 책 보기
-			</Link>
+				<div className="mx-auto max-w-lg">
+					<Link
+						href={homeUrl}
+						className="flex w-full items-center justify-center rounded-xl bg-primary py-4 text-base font-semibold text-white shadow-lg transition-all hover:opacity-90 active:scale-[0.99]"
+					>
+						해당 도서관에 꽂힌 책 보기
+					</Link>
+				</div>
+			</div>
 
 			<BottomNav />
 		</>

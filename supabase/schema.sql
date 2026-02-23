@@ -116,6 +116,7 @@ CREATE TABLE public.books (
   authors TEXT,
   publisher TEXT,
   thumbnail_url TEXT,
+  user_images TEXT[] NOT NULL,
   user_review VARCHAR(100),
   condition book_condition NOT NULL,
   status book_status NOT NULL DEFAULT 'AVAILABLE',

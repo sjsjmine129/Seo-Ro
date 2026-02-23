@@ -202,10 +202,12 @@ export default async function Home({
 									: null;
 
 							return (
-								<article
+								<Link
 									key={book.id}
-									className="flex gap-4 rounded-2xl border border-white/40 bg-white/60 p-4 shadow-sm backdrop-blur-md"
+									href={`/book/${book.id}`}
+									className="block transition-opacity hover:opacity-95"
 								>
+									<article className="flex gap-4 rounded-2xl border border-white/40 bg-white/60 p-4 shadow-sm backdrop-blur-md">
 									{/* Thumbnail */}
 									<div className="h-28 w-20 flex-shrink-0 overflow-hidden rounded-lg bg-neutral-200 shadow-sm">
 										{book.thumbnail_url ? (
@@ -249,6 +251,7 @@ export default async function Home({
 										)}
 									</div>
 								</article>
+								</Link>
 							);
 						})}
 					</div>
