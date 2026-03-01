@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
-import Link from "next/link";
 import {
 	Search,
 	Camera,
@@ -13,6 +12,7 @@ import {
 	X,
 	Library,
 	MapPin,
+	HelpCircle,
 } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import BackButton from "@/components/BackButton";
@@ -22,9 +22,11 @@ import {
 	getLibraryById,
 	getUserInterestedLibraries,
 	searchLibraries,
+	getAllLibrariesWithCoords,
 	shelveBook,
 	type NaverBookItem,
 	type LibraryInfo,
+	type LibraryWithCoords,
 } from "./actions";
 import { compressImage } from "@/lib/compress-image";
 
@@ -35,6 +37,24 @@ const CONDITION_OPTIONS = [
 	{ value: "C" as const, label: "C급", desc: "헌 책" },
 	{ value: "D" as const, label: "D급", desc: "파손 있음" },
 ];
+
+function haversineDistance(
+	lat1: number,
+	lng1: number,
+	lat2: number,
+	lng2: number,
+): number {
+	const R = 6371;
+	const dLat = ((lat2 - lat1) * Math.PI) / 180;
+	const dLng = ((lng2 - lng1) * Math.PI) / 180;
+	const a =
+		Math.sin(dLat / 2) ** 2 +
+		Math.cos((lat1 * Math.PI) / 180) *
+			Math.cos((lat2 * Math.PI) / 180) *
+			Math.sin(dLng / 2) ** 2;
+	const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+	return R * c;
+}
 
 type FormState = {
 	book: {
@@ -81,8 +101,13 @@ export default function ShelvePage() {
 	const [librarySearchResults, setLibrarySearchResults] = useState<
 		LibraryInfo[]
 	>([]);
-	const [isLibrarySearching, setIsLibrarySearching] = useState(false);
 	const [showLibrarySearch, setShowLibrarySearch] = useState(false);
+	const [showConditionHelp, setShowConditionHelp] = useState(false);
+	const [nearbyLibraries, setNearbyLibraries] = useState<LibraryWithCoords[]>(
+		[],
+	);
+	const [isFindingNearby, setIsFindingNearby] = useState(false);
+	const [geoError, setGeoError] = useState<string | null>(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
@@ -154,7 +179,7 @@ export default function ShelvePage() {
 				setShowManualEntry(true);
 			}
 		});
-	}, []);
+	}, [handleSelectBook]);
 
 	const handleManualSubmit = useCallback(() => {
 		if (!manualTitle.trim()) return;
@@ -222,12 +247,11 @@ export default function ShelvePage() {
 
 	const handleLibrarySearch = useCallback(async () => {
 		if (!librarySearchQuery.trim()) return;
-		setIsLibrarySearching(true);
 		try {
 			const results = await searchLibraries(librarySearchQuery);
 			setLibrarySearchResults(results);
-		} finally {
-			setIsLibrarySearching(false);
+		} catch {
+			setLibrarySearchResults([]);
 		}
 	}, [librarySearchQuery]);
 
@@ -261,10 +285,51 @@ export default function ShelvePage() {
 		}));
 	}, []);
 
-	const canProceedStep2 = useMemo(
-		() => form.book.title.trim().length > 0,
-		[form.book.title],
-	);
+	const handleFindNearby = useCallback(() => {
+		setGeoError(null);
+		if (!navigator.geolocation) {
+			setGeoError("이 브라우저는 위치 서비스를 지원하지 않습니다.");
+			return;
+		}
+		setIsFindingNearby(true);
+		navigator.geolocation.getCurrentPosition(
+			async (pos) => {
+				const { latitude, longitude } = pos.coords;
+				try {
+					const libs = await getAllLibrariesWithCoords();
+					const sorted = [...libs].sort((a, b) => {
+						const dA = haversineDistance(
+							latitude,
+							longitude,
+							a.lat,
+							a.lng,
+						);
+						const dB = haversineDistance(
+							latitude,
+							longitude,
+							b.lat,
+							b.lng,
+						);
+						return dA - dB;
+					});
+					setNearbyLibraries(sorted.slice(0, 15));
+				} catch {
+					setGeoError("도서관 목록을 불러오지 못했습니다.");
+					setNearbyLibraries([]);
+				} finally {
+					setIsFindingNearby(false);
+				}
+			},
+			() => {
+				setGeoError(
+					"위치 정보를 가져올 수 없습니다. 권한을 확인해 주세요.",
+				);
+				setIsFindingNearby(false);
+			},
+			{ enableHighAccuracy: true },
+		);
+	}, []);
+
 	const canProceedStep3 = useMemo(() => {
 		if (form.images.length < 1) return false;
 		if (!form.userReview.trim()) return false;
@@ -563,29 +628,80 @@ export default function ShelvePage() {
 								</div>
 							</div>
 
-							<div>
-								<h3 className="mb-2 text-sm font-semibold">
-									상태
-								</h3>
+							<div className="relative">
+								<div className="mb-2 flex items-center gap-2">
+									<h3 className="text-sm font-semibold">
+										책 상태
+									</h3>
+									<button
+										type="button"
+										onClick={() =>
+											setShowConditionHelp((prev) => !prev)
+										}
+										className={`rounded-full p-0.5 transition-colors focus:outline-none ${
+											showConditionHelp
+												? "text-primary"
+												: "text-foreground/50 hover:text-primary"
+										}`}
+										aria-label="상태 등급 설명"
+									>
+										<HelpCircle className="h-4 w-4" />
+									</button>
+								</div>
+								{showConditionHelp && (
+									<div
+										className="fixed inset-0 z-[60] bg-black/20"
+										onClick={() => setShowConditionHelp(false)}
+									>
+										<div
+											onClick={(e) => e.stopPropagation()}
+											className="absolute left-1/2 top-1/2 z-[61] w-72 max-w-[85vw] -translate-x-1/2 -translate-y-1/2 rounded-xl border border-white/40 bg-white/95 px-4 py-3 text-xs leading-relaxed text-foreground shadow-lg backdrop-blur-md"
+										>
+											<div className="space-y-1">
+												{CONDITION_OPTIONS.map((opt) => (
+													<p key={opt.value}>
+														{opt.label}: {opt.desc}
+													</p>
+												))}
+											</div>
+											<button
+												type="button"
+												onClick={() =>
+													setShowConditionHelp(false)
+												}
+												className="mt-2 text-primary"
+											>
+												닫기
+											</button>
+										</div>
+									</div>
+								)}
 								<div className="flex flex-wrap gap-2">
 									{CONDITION_OPTIONS.map((opt) => (
-										<button
+										<div
 											key={opt.value}
-											type="button"
-											onClick={() =>
-												setForm((prev) => ({
-													...prev,
-													condition: opt.value,
-												}))
-											}
-											className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-												form.condition === opt.value
-													? "bg-primary text-white"
-													: "border border-white/40 bg-white/70 text-foreground backdrop-blur-md hover:bg-white/90"
-											}`}
+											className="group relative"
 										>
-											{opt.label}
-										</button>
+											<button
+												type="button"
+												onClick={() =>
+													setForm((prev) => ({
+														...prev,
+														condition: opt.value,
+													}))
+												}
+												className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+													form.condition === opt.value
+														? "bg-primary text-white"
+														: "border border-white/40 bg-white/70 text-foreground backdrop-blur-md hover:bg-white/90"
+												}`}
+											>
+												{opt.label}
+											</button>
+											<span className="pointer-events-none absolute left-1/2 top-full z-10 mt-1 -translate-x-1/2 whitespace-nowrap rounded bg-black/80 px-2 py-1 text-[10px] text-white opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+												{opt.desc}
+											</span>
+										</div>
 									))}
 								</div>
 							</div>
@@ -669,6 +785,47 @@ export default function ShelvePage() {
 									<Library className="h-5 w-5" />내 관심
 									도서관 모두 추가
 								</button>
+
+								<div className="mb-3 flex gap-2">
+									<button
+										type="button"
+										onClick={handleFindNearby}
+										disabled={isFindingNearby}
+										className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-white/40 bg-white/70 px-4 py-3 text-sm font-medium backdrop-blur-md transition-opacity hover:bg-white/90 disabled:opacity-50"
+									>
+										<MapPin className="h-5 w-5 flex-shrink-0 text-primary" />
+										{isFindingNearby
+											? "찾는 중..."
+											: "내 주변 도서관 찾기"}
+									</button>
+								</div>
+								{geoError && (
+									<p className="mb-2 text-sm text-accent">
+										{geoError}
+									</p>
+								)}
+								{nearbyLibraries.length > 0 && (
+									<div className="mb-3">
+										<p className="mb-2 text-xs font-medium text-foreground/70">
+											가까운 도서관
+										</p>
+										<div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden">
+											{nearbyLibraries.map((lib) => (
+												<button
+													key={lib.id}
+													type="button"
+													onClick={() =>
+														handleAddLibrary(lib)
+													}
+													className="flex flex-shrink-0 items-center gap-1.5 rounded-full border border-white/40 bg-white/70 px-3 py-2 text-sm backdrop-blur-md transition-opacity hover:bg-white/90"
+												>
+													<MapPin className="h-3.5 w-3.5 text-primary/70" />
+													{lib.name}
+												</button>
+											))}
+										</div>
+									</div>
+								)}
 
 								<div className="flex gap-2">
 									<div className="flex flex-1 items-center gap-2 rounded-xl border border-white/40 bg-white/70 px-4 py-3 backdrop-blur-md">

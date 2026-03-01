@@ -95,10 +95,17 @@ export async function getUserInterestedLibraries(): Promise<LibraryInfo[]> {
 
 	if (error) return [];
 
-	return (data ?? []).map((row: { library_id: string; libraries: { id: string; name: string } | null }) => ({
-		id: row.library_id,
-		name: row.libraries?.name ?? "Unknown",
-	}));
+	return (data ?? []).map((row: Record<string, unknown>) => {
+		const lib = row.libraries;
+		const libObj =
+			lib && typeof lib === "object" && !Array.isArray(lib)
+				? (lib as { id?: string; name?: string })
+				: null;
+		return {
+			id: row.library_id as string,
+			name: libObj?.name ?? "Unknown",
+		};
+	});
 }
 
 export async function searchLibraries(query: string): Promise<LibraryInfo[]> {
@@ -114,6 +121,25 @@ export async function searchLibraries(query: string): Promise<LibraryInfo[]> {
 	if (error) return [];
 
 	return (data ?? []).map((r) => ({ id: r.id, name: r.name }));
+}
+
+export type LibraryWithCoords = LibraryInfo & { lat: number; lng: number };
+
+export async function getAllLibrariesWithCoords(): Promise<LibraryWithCoords[]> {
+	const supabase = await createClient();
+	const { data, error } = await supabase
+		.from("libraries")
+		.select("id, name, lat, lng")
+		.limit(500);
+
+	if (error) return [];
+
+	return (data ?? []).map((r) => ({
+		id: r.id,
+		name: r.name,
+		lat: Number(r.lat),
+		lng: Number(r.lng),
+	}));
 }
 
 export type ShelveBookInput = {
