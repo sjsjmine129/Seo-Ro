@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import {
@@ -112,6 +112,7 @@ export default function ShelvePage() {
 	const [error, setError] = useState<string | null>(null);
 
 	const libraryIdFromUrl = searchParams.get("libraryId");
+	const hasAppliedLibraryIdRef = useRef(false);
 
 	useEffect(() => {
 		createClient()
@@ -122,7 +123,8 @@ export default function ShelvePage() {
 	}, [router]);
 
 	useEffect(() => {
-		if (!libraryIdFromUrl) return;
+		if (!libraryIdFromUrl || hasAppliedLibraryIdRef.current) return;
+		hasAppliedLibraryIdRef.current = true;
 		getLibraryById(libraryIdFromUrl).then((lib) => {
 			if (lib) {
 				setForm((prev) => {

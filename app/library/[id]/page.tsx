@@ -148,10 +148,13 @@ export default async function LibraryDetailPage({
 						이 도서관에 새로 꽂힌 책
 					</h2>
 					{books.length === 0 ? (
-						<p className="rounded-xl border border-white/40 bg-white/60 py-8 text-center text-sm text-foreground/60">
+						<Link
+							href={`/shelve?libraryId=${id}`}
+							className="block rounded-xl border border-white/40 bg-white/60 py-8 text-center text-sm text-foreground/60 transition-opacity hover:opacity-90"
+						>
 							등록된 책이 없습니다. <br />이 도서관에 제일 먼저
 							책을 꽂아주세요!
-						</p>
+						</Link>
 					) : (
 						<div className="-mx-4 mt-2 flex gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden">
 							{books.map((book) => (
