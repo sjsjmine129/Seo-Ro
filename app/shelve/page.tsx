@@ -28,7 +28,7 @@ import {
 	type LibraryInfo,
 	type LibraryWithCoords,
 } from "./actions";
-import { compressImage } from "@/lib/compress-image";
+import imageCompression from "browser-image-compression";
 
 const CONDITION_OPTIONS = [
 	{ value: "S" as const, label: "S급", desc: "새 책" },
@@ -202,12 +202,34 @@ export default function ShelvePage() {
 	const handleImageAdd = useCallback(
 		async (e: React.ChangeEvent<HTMLInputElement>) => {
 			const files = e.target.files;
-			if (!files || form.images.length >= 3) return;
-			const toAdd = Math.min(3 - form.images.length, files.length);
+			if (!files || files.length === 0) return;
+
+			const currentCount = form.images.length;
+			const totalAfterAdd = currentCount + files.length;
+
+			if (totalAfterAdd > 3) {
+				alert("사진은 최대 3장까지 업로드할 수 있습니다.");
+			}
+
+			const toAdd = Math.min(3 - currentCount, files.length);
+			if (toAdd <= 0) {
+				e.target.value = "";
+				return;
+			}
+
+			const compressionOptions = {
+				maxSizeMB: 1,
+				maxWidthOrHeight: 1920,
+				useWebWorker: true,
+			};
+
 			const newFiles: File[] = [];
 			for (let i = 0; i < toAdd; i++) {
 				try {
-					const compressed = await compressImage(files[i]);
+					const compressed = await imageCompression(
+						files[i],
+						compressionOptions,
+					);
 					if (compressed.size > 5 * 1024 * 1024) {
 						setError(`이미지 ${i + 1}이(가) 5MB를 초과합니다.`);
 						continue;
@@ -586,7 +608,7 @@ export default function ShelvePage() {
 
 							<div>
 								<h3 className="mb-2 text-sm font-semibold">
-									사진 (1~3장, 필수)
+									사진 (1~3장, 필수) ({form.images.length} / 3)
 								</h3>
 								<div className="flex flex-wrap gap-3">
 									{form.images.map((file, i) => (
@@ -619,7 +641,7 @@ export default function ShelvePage() {
 											<input
 												type="file"
 												accept="image/*"
-												capture="environment"
+												multiple
 												onChange={handleImageAdd}
 												className="hidden"
 											/>
