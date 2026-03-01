@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 import { createClient } from "@/utils/supabase/server";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
@@ -106,7 +107,7 @@ export default async function LibraryDetailPage({
 
 	return (
 		<>
-			<div className="flex min-h-screen flex-col bg-background px-4 pb-36 pt-6">
+			<div className="flex min-h-screen flex-col bg-background px-4 pb-40 pt-6">
 				<NaverMap
 					lat={Number(library.lat)}
 					lng={Number(library.lng)}
@@ -114,7 +115,7 @@ export default async function LibraryDetailPage({
 				/>
 
 				{/* Header */}
-				<h1 className="text-xl font-bold text-foreground">
+				<h1 className="text-xl pt-2 font-bold text-foreground">
 					{library.name}
 				</h1>
 				{library.address && (
@@ -125,7 +126,7 @@ export default async function LibraryDetailPage({
 				)}
 
 				{/* Action buttons */}
-				<div className="mt-6">
+				<div className="mt-6 ">
 					<LibraryDetailClient
 						library={{
 							id: library.id,
@@ -147,10 +148,13 @@ export default async function LibraryDetailPage({
 						이 도서관에 새로 꽂힌 책
 					</h2>
 					{books.length === 0 ? (
-						<p className="rounded-xl border border-white/40 bg-white/60 py-8 text-center text-sm text-foreground/60">
+						<Link
+							href={`/shelve?libraryId=${id}`}
+							className="block rounded-xl border border-white/40 bg-white/60 py-8 text-center text-sm text-foreground/60 transition-opacity hover:opacity-90"
+						>
 							등록된 책이 없습니다. <br />이 도서관에 제일 먼저
 							책을 꽂아주세요!
-						</p>
+						</Link>
 					) : (
 						<div className="-mx-4 mt-2 flex gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden">
 							{books.map((book) => (
@@ -205,13 +209,21 @@ export default async function LibraryDetailPage({
 			</div>
 
 			{/* Floating bottom button - above BottomNav */}
-			<Link
-				href={homeUrl}
-				className="fixed left-0 right-0 z-40 flex items-center justify-center bg-primary py-4 text-base font-semibold text-white shadow-lg transition-opacity hover:opacity-90"
-				style={{ bottom: "calc(65px + env(safe-area-inset-bottom))" }}
+			<div
+				className="fixed left-0 right-0 z-40 px-4"
+				style={{
+					bottom: "calc(65px + 16px + env(safe-area-inset-bottom))",
+				}}
 			>
-				해당 도서관에 꽂힌 책 보기
-			</Link>
+				<div className="mx-auto max-w-lg">
+					<Link
+						href={homeUrl}
+						className="flex w-full items-center justify-center rounded-xl bg-primary py-4 text-base font-semibold text-white shadow-lg transition-all hover:opacity-90 active:scale-[0.99]"
+					>
+						해당 도서관에 꽂힌 책 보기
+					</Link>
+				</div>
+			</div>
 
 			<BottomNav />
 		</>

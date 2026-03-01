@@ -1,7 +1,7 @@
 import { createClient } from "@/utils/supabase/server";
 import BottomNav from "@/components/BottomNav";
 import LibraryFilter from "@/components/LibraryFilter";
-import { BookOpen } from "lucide-react";
+import { BookOpen, Library } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -147,11 +147,17 @@ export default async function Home({
 		if (libraryId && libraryId !== "all") {
 			selectedLibraryName = await getLibraryName(supabase, libraryId);
 		}
-		books = await getBooks(
-			supabase,
-			libraryId,
-			libraries.map((l) => l.id),
-		);
+		const isInterestedFilter = !libraryId || libraryId === "all";
+		const hasNoInterestedLibraries = libraries.length === 0;
+		if (isInterestedFilter && hasNoInterestedLibraries) {
+			books = [];
+		} else {
+			books = await getBooks(
+				supabase,
+				libraryId,
+				libraries.map((l) => l.id),
+			);
+		}
 	} catch (err) {
 		console.error("[Home] Caught error (full object):", err);
 		errorMessage =
@@ -161,6 +167,8 @@ export default async function Home({
 	}
 
 	const selectedId = libraryId ?? "all";
+	const isEmptyInterestedLibraries =
+		selectedId === "all" && libraries.length === 0 && books.length === 0;
 
 	return (
 		<>
@@ -176,18 +184,37 @@ export default async function Home({
 						{errorMessage}
 					</div>
 				) : books.length === 0 ? (
-					<div className="flex flex-col items-center justify-center gap-4 py-16 text-center">
-						<p className="text-foreground/70">
-							도서관에 등록된 책이 아직 없어요. 제일 먼저 책을
-							등록해 보세요!
-						</p>
-						<Link
-							href="/shelve"
-							className="rounded-full bg-primary px-6 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
-						>
-							교환할 책 꽂기
-						</Link>
-					</div>
+					isEmptyInterestedLibraries ? (
+						<div className="flex min-h-[50vh] flex-col items-center justify-center gap-6 py-16 text-center">
+							<Library
+								className="h-16 w-16 text-muted-foreground/50"
+								strokeWidth={1.5}
+							/>
+							<p className="text-center text-muted-foreground">
+								관심 도서관이 없네요. 관심도서관을 등록해
+								주세요!
+							</p>
+							<Link
+								href="/search"
+								className="rounded-full bg-primary px-6 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
+							>
+								도서관 검색하러 가기
+							</Link>
+						</div>
+					) : (
+						<div className="flex flex-col items-center justify-center gap-4 py-16 text-center">
+							<p className="text-foreground/70">
+								도서관에 등록된 책이 아직 없어요. 제일 먼저 책을
+								등록해 보세요!
+							</p>
+							<Link
+								href="/shelve"
+								className="rounded-full bg-primary px-6 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
+							>
+								교환할 책 꽂기
+							</Link>
+						</div>
+					)
 				) : (
 					<div className="flex flex-col gap-4">
 						{books.map((book) => {
@@ -202,10 +229,12 @@ export default async function Home({
 									: null;
 
 							return (
-								<article
+								<Link
 									key={book.id}
-									className="flex gap-4 rounded-2xl border border-white/40 bg-white/60 p-4 shadow-sm backdrop-blur-md"
+									href={`/book/${book.id}`}
+									className="block transition-opacity hover:opacity-95"
 								>
+									<article className="flex gap-4 rounded-2xl border border-white/40 bg-white/60 p-4 shadow-sm backdrop-blur-md">
 									{/* Thumbnail */}
 									<div className="h-28 w-20 flex-shrink-0 overflow-hidden rounded-lg bg-neutral-200 shadow-sm">
 										{book.thumbnail_url ? (
@@ -249,6 +278,7 @@ export default async function Home({
 										)}
 									</div>
 								</article>
+								</Link>
 							);
 						})}
 					</div>
