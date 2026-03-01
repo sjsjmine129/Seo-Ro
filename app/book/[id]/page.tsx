@@ -94,7 +94,6 @@ export default async function BookDetailPage({
 	return (
 		<>
 			<div className="relative mx-auto flex min-h-screen max-w-lg flex-col pb-40">
-				{/* Sticky header: BackButton (left) + Library badge (right). Content scrolls behind. */}
 				<div
 					className="sticky z-40 mb-4 flex justify-between items-center px-4 "
 					style={{
@@ -118,7 +117,7 @@ export default async function BookDetailPage({
 					)}
 				</div>
 
-				<main className="flex flex-col px-6 pt-2">
+				<main className="flex flex-col px-6 pt-4">
 					{/* Image Carousel */}
 					<div className="overflow-hidden rounded-2xl border border-white/40 bg-white/60 shadow-sm">
 						<BookImageCarousel

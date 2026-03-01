@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 import { createClient } from "@/utils/supabase/server";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
@@ -114,7 +115,7 @@ export default async function LibraryDetailPage({
 				/>
 
 				{/* Header */}
-				<h1 className="text-xl font-bold text-foreground">
+				<h1 className="text-xl pt-2 font-bold text-foreground">
 					{library.name}
 				</h1>
 				{library.address && (
@@ -125,7 +126,7 @@ export default async function LibraryDetailPage({
 				)}
 
 				{/* Action buttons */}
-				<div className="mt-6">
+				<div className="mt-6 ">
 					<LibraryDetailClient
 						library={{
 							id: library.id,
