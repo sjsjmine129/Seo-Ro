@@ -19,8 +19,10 @@ CREATE TYPE book_status AS ENUM ('AVAILABLE', 'SWAPPING', 'SWAPPED', 'HIDDEN');
 
 CREATE TYPE exchange_status AS ENUM (
   'REQUESTED',
+  'COUNTER_REQUESTED',
   'ACCEPTED',
   'SCHEDULED',
+  'TIME_PROPOSED',
   'COMPLETED',
   'CANCELED',
   'REJECTED'
@@ -142,6 +144,7 @@ CREATE TABLE public.exchanges (
   owner_book_id UUID NOT NULL REFERENCES public.books(id) ON DELETE CASCADE,
   library_id UUID NOT NULL REFERENCES public.libraries(id) ON DELETE CASCADE,
   meet_at TIMESTAMPTZ,
+  proposed_times JSONB NOT NULL DEFAULT '[]'::jsonb,
   status exchange_status NOT NULL DEFAULT 'REQUESTED',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

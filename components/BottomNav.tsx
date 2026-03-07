@@ -14,7 +14,7 @@ const NAV_ITEMS = [
 		icon: Bell,
 		showDot: true,
 	},
-	{ href: "/my-library", label: "My Library", icon: User },
+	{ href: "/mypage", label: "My Page", icon: User },
 ] as const;
 
 export default function BottomNav() {

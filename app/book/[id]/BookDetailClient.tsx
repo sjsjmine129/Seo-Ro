@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { User, Quote, Trash2 } from "lucide-react";
 import BackButton from "@/components/BackButton";
@@ -8,6 +9,7 @@ import BookImageCarousel from "@/components/BookImageCarousel";
 import ConditionBadgeWithTooltip from "@/components/ConditionBadgeWithTooltip";
 import LibraryLocationsBadge from "./components/LibraryLocationsBadge";
 import type { LibraryItem } from "./components/LibraryLocationsBadge";
+import SelectMyBookModal from "./components/SelectMyBookModal";
 import { deleteBook } from "./actions";
 
 type BookDetailClientProps = {
@@ -31,6 +33,7 @@ type BookDetailClientProps = {
 	conditionLabel: string;
 	isOwner: boolean;
 	isAvailable: boolean;
+	activeExchangeId: string | null;
 };
 
 export default function BookDetailClient({
@@ -40,9 +43,16 @@ export default function BookDetailClient({
 	conditionLabel,
 	isOwner,
 	isAvailable,
+	activeExchangeId,
 }: BookDetailClientProps) {
 	const router = useRouter();
 	const [isLibraryModalOpen, setIsLibraryModalOpen] = useState(false);
+	const [isSwapModalOpen, setIsSwapModalOpen] = useState(false);
+
+	const inActiveExchange = !!activeExchangeId;
+	const isSwappingWithOther = book.status === "SWAPPING" && !inActiveExchange;
+	const canRequestSwap =
+		!isOwner && book.status === "AVAILABLE" && libraries.length > 0;
 
 	const handleDelete = async () => {
 		if (book.status !== "AVAILABLE") return;
@@ -166,8 +176,8 @@ export default function BookDetailClient({
 					)}
 				</main>
 
-				{/* Floating Bottom Action - hidden when library modal is open */}
-				{!isLibraryModalOpen && (
+				{/* Floating Bottom Action - hidden when modals open; show only for non-owners */}
+				{!isLibraryModalOpen && !isSwapModalOpen && !isOwner && (
 					<div
 						className="fixed left-0 right-0 z-40 px-4"
 						style={{
@@ -175,20 +185,40 @@ export default function BookDetailClient({
 						}}
 					>
 						<div className="mx-auto max-w-lg">
-							<button
-								type="button"
-								disabled={!isAvailable}
-								className={`w-full rounded-xl py-4 text-base font-semibold text-white shadow-lg transition-all ${
-									isAvailable
-										? "bg-primary hover:opacity-90 active:scale-[0.99]"
-										: "cursor-not-allowed bg-neutral-400"
-								}`}
-							>
-								{isAvailable ? "바꿔읽기" : "교환 중인 책입니다"}
-							</button>
+							{inActiveExchange ? (
+								<Link
+									href={`/exchange/${activeExchangeId}`}
+									className="block w-full rounded-xl bg-primary py-4 text-center text-base font-semibold text-white shadow-lg transition-all hover:opacity-90 active:scale-[0.99]"
+								>
+									교환 화면으로 이동
+								</Link>
+							) : isSwappingWithOther ? (
+								<button
+									type="button"
+									disabled
+									className="w-full cursor-not-allowed rounded-xl bg-neutral-400 py-4 text-base font-semibold text-white shadow-lg"
+								>
+									교환 진행 중인 책입니다
+								</button>
+							) : canRequestSwap ? (
+								<button
+									type="button"
+									onClick={() => setIsSwapModalOpen(true)}
+									className="w-full rounded-xl bg-primary py-4 text-base font-semibold text-white shadow-lg transition-all hover:opacity-90 active:scale-[0.99]"
+								>
+									바꿔읽기
+								</button>
+							) : null}
 						</div>
 					</div>
 				)}
+
+				<SelectMyBookModal
+					isOpen={isSwapModalOpen}
+					onClose={() => setIsSwapModalOpen(false)}
+					ownerBookId={book.id}
+					libraries={libraries}
+				/>
 			</div>
 		</>
 	);
