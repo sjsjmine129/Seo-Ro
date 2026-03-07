@@ -2,6 +2,7 @@ import { createClient } from "@/utils/supabase/server";
 import { redirect, notFound } from "next/navigation";
 import BottomNav from "@/components/BottomNav";
 import BookDetailClient from "./BookDetailClient";
+import { getActiveExchangeForBook } from "@/app/actions/exchange";
 
 const CONDITION_LABELS: Record<string, string> = {
 	S: "S급",
@@ -96,6 +97,8 @@ export default async function BookDetailPage({
 	const isAvailable = book.status === "AVAILABLE";
 	const isOwner = user.id === book.owner_id;
 
+	const activeExchange = await getActiveExchangeForBook(book.id, user.id);
+
 	return (
 		<>
 			<BookDetailClient
@@ -105,6 +108,7 @@ export default async function BookDetailPage({
 				conditionLabel={conditionLabel}
 				isOwner={isOwner}
 				isAvailable={isAvailable}
+				activeExchangeId={activeExchange?.id ?? null}
 			/>
 			<BottomNav />
 		</>
