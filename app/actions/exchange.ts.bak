@@ -88,7 +88,6 @@ export async function requestExchange(
 			owner_book_id: ownerBookId,
 			library_id: libraryId,
 			status: "REQUESTED",
-			proposed_times: [],
 		})
 		.select("id")
 		.single();
@@ -383,6 +382,156 @@ export async function counterRequestExchange(
 		throw new Error(`교환 업데이트 실패: ${err3.message}`);
 	}
 }
+
+export async function confirmExchangeTime(
+	exchangeId: string,
+	selectedTime: string,
+) {
+	const supabase = await createClient();
+	const {
+		data: { user },
+	} = await supabase.auth.getUser();
+	if (!user) redirect("/login");
+
+	const { data: ex } = await supabase
+		.from("exchanges")
+		.select("requester_id, status, proposed_times")
+		.eq("id", exchangeId)
+		.single();
+
+	if (!ex || ex.requester_id !== user.id) {
+		throw new Error("권한이 없습니다.");
+	}
+	if (ex.status !== "TIME_PROPOSED") {
+		throw new Error("이미 처리된 교환입니다.");
+	}
+
+	const proposed = (ex.proposed_times ?? []) as string[];
+	const normalized = proposed.map((t) => normalizeTimeSlot(t));
+	if (!normalized.includes(normalizeTimeSlot(selectedTime))) {
+		throw new Error("제안된 시간 중에서 선택해 주세요.");
+	}
+
+	const { error } = await supabase
+		.from("exchanges")
+		.update({
+			meet_at: selectedTime,
+			status: "SCHEDULED",
+		})
+		.eq("id", exchangeId);
+
+	if (error) throw new Error(`약속 확정 실패: ${error.message}`);
+}
+
+function normalizeTimeSlot(s: string): string {
+	const d = new Date(s);
+	const y = d.getFullYear();
+	const m = (d.getMonth() + 1).toString().padStart(2, "0");
+	const day = d.getDate().toString().padStart(2, "0");
+	const h = d.getHours().toString().padStart(2, "0");
+	const min = d.getMinutes().toString().padStart(2, "0");
+	return `${y}-${m}-${day}T${h}:${min}:00`;
+}
+
+export async function cancelExchangeNoMatchingTime(exchangeId: string) {
+	const supabase = await createClient();
+	const {
+		data: { user },
+	} = await supabase.auth.getUser();
+	if (!user) redirect("/login");
+
+	const { data: ex } = await supabase
+		.from("exchanges")
+		.select("requester_id, status")
+		.eq("id", exchangeId)
+		.single();
+
+	if (!ex || ex.requester_id !== user.id) {
+		throw new Error("권한이 없습니다.");
+	}
+	if (ex.status !== "TIME_PROPOSED") {
+		throw new Error("이미 처리된 교환입니다.");
+	}
+
+	await revertBooksAndUpdateExchange(supabase, exchangeId, "CANCELED");
+}
+
+export async function confirmExchangeTime(
+	exchangeId: string,
+	selectedTime: string,
+) {
+	const supabase = await createClient();
+	const {
+		data: { user },
+	} = await supabase.auth.getUser();
+	if (!user) redirect("/login");
+
+	const { data: ex } = await supabase
+		.from("exchanges")
+		.select("requester_id, status, proposed_times")
+		.eq("id", exchangeId)
+		.single();
+
+	if (!ex || ex.requester_id !== user.id) {
+		throw new Error("권한이 없습니다.");
+	}
+	if (ex.status !== "TIME_PROPOSED") {
+		throw new Error("이미 처리된 교환입니다.");
+	}
+
+	const proposed = (ex.proposed_times ?? []) as string[];
+	const normalizedSelected = normalizeTimeForComparison(selectedTime);
+	const isAllowed = proposed.some(
+		(t) => normalizeTimeForComparison(t) === normalizedSelected,
+	);
+	if (!isAllowed) {
+		throw new Error("제안된 시간 중에서만 선택해 주세요.");
+	}
+
+	const { error } = await supabase
+		.from("exchanges")
+		.update({
+			meet_at: selectedTime,
+			status: "SCHEDULED",
+		})
+		.eq("id", exchangeId);
+
+	if (error) throw new Error(`약속 확정 실패: ${error.message}`);
+}
+
+function normalizeTimeForComparison(t: string): string {
+	const d = new Date(t);
+	const y = d.getFullYear();
+	const m = (d.getMonth() + 1).toString().padStart(2, "0");
+	const day = d.getDate().toString().padStart(2, "0");
+	const h = d.getHours().toString().padStart(2, "0");
+	const min = d.getMinutes().toString().padStart(2, "0");
+	return `${y}-${m}-${day}T${h}:${min}:00`;
+}
+
+export async function cancelExchangeNoMatchingTime(exchangeId: string) {
+	const supabase = await createClient();
+	const {
+		data: { user },
+	} = await supabase.auth.getUser();
+	if (!user) redirect("/login");
+
+	const { data: ex } = await supabase
+		.from("exchanges")
+		.select("requester_id, status")
+		.eq("id", exchangeId)
+		.single();
+
+	if (!ex || ex.requester_id !== user.id) {
+		throw new Error("권한이 없습니다.");
+	}
+	if (ex.status !== "TIME_PROPOSED") {
+		throw new Error("이미 처리된 교환입니다.");
+	}
+
+	await revertBooksAndUpdateExchange(supabase, exchangeId, "CANCELED");
+}
+
 export async function respondToCounterRequest(
 	exchangeId: string,
 	isAccepted: boolean,
@@ -430,9 +579,9 @@ export async function respondToCounterRequest(
 	}
 }
 
-export async function markExchangeCompleted(
+export async function confirmExchangeTime(
 	exchangeId: string,
-	role: "requester" | "owner",
+	selectedTime: string,
 ) {
 	const supabase = await createClient();
 	const {
@@ -442,95 +591,139 @@ export async function markExchangeCompleted(
 
 	const { data: ex } = await supabase
 		.from("exchanges")
-		.select(
-			"requester_id, owner_id, status, requester_completed, owner_completed, requester_book_id, owner_book_id",
-		)
+		.select("requester_id, status, proposed_times")
 		.eq("id", exchangeId)
 		.single();
 
-	if (!ex) throw new Error("교환 정보를 찾을 수 없습니다.");
-	if (ex.status !== "SCHEDULED") {
+	if (!ex || ex.requester_id !== user.id) {
+		throw new Error("권한이 없습니다.");
+	}
+	if (ex.status !== "TIME_PROPOSED") {
 		throw new Error("이미 처리된 교환입니다.");
 	}
-	if (role === "requester" && ex.requester_id !== user.id) {
-		throw new Error("권한이 없습니다.");
+
+	const proposed = (ex.proposed_times ?? []) as string[];
+	const normalized = proposed.map((t) => normalizeTimeSlot(t));
+	if (!normalized.includes(normalizeTimeSlot(selectedTime))) {
+		throw new Error("제안된 시간 중에서 선택해 주세요.");
 	}
-	if (role === "owner" && ex.owner_id !== user.id) {
-		throw new Error("권한이 없습니다.");
-	}
-
-	const updateField =
-		role === "requester" ? { requester_completed: true } : { owner_completed: true };
-	const { error: updateErr } = await supabase
-		.from("exchanges")
-		.update(updateField)
-		.eq("id", exchangeId);
-
-	if (updateErr) throw new Error(`확인 실패: ${updateErr.message}`);
-
-	const { data: updated } = await supabase
-		.from("exchanges")
-		.select("requester_completed, owner_completed")
-		.eq("id", exchangeId)
-		.single();
-
-	if (
-		updated?.requester_completed === true &&
-		updated?.owner_completed === true
-	) {
-		await supabase
-			.from("books")
-			.update({ status: "SWAPPED" })
-			.in("id", [ex.requester_book_id, ex.owner_book_id]);
-
-		await supabase
-			.from("exchanges")
-			.update({ status: "COMPLETED" })
-			.eq("id", exchangeId);
-
-		await supabase.rpc("increment_bookshelf_score", {
-			user_ids: [ex.requester_id, ex.owner_id],
-			delta: 2,
-		});
-	}
-}
-
-export async function reportNoShow(
-	exchangeId: string,
-	requesterBookId: string,
-	ownerBookId: string,
-) {
-	const supabase = await createClient();
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
-	if (!user) redirect("/login");
-
-	const { data: ex } = await supabase
-		.from("exchanges")
-		.select("requester_id, owner_id, status")
-		.eq("id", exchangeId)
-		.single();
-
-	if (!ex) throw new Error("교환 정보를 찾을 수 없습니다.");
-	if (ex.status !== "SCHEDULED") {
-		throw new Error("이미 처리된 교환입니다.");
-	}
-	if (ex.requester_id !== user.id && ex.owner_id !== user.id) {
-		throw new Error("권한이 없습니다.");
-	}
-
-	await supabase
-		.from("books")
-		.update({ status: "AVAILABLE" })
-		.in("id", [requesterBookId, ownerBookId]);
 
 	const { error } = await supabase
 		.from("exchanges")
-		.update({ status: "CANCELED" })
+		.update({
+			meet_at: selectedTime,
+			status: "SCHEDULED",
+		})
 		.eq("id", exchangeId);
 
-	if (error) throw new Error(`취소 실패: ${error.message}`);
+	if (error) throw new Error(`약속 확정 실패: ${error.message}`);
+}
+
+function normalizeTimeSlot(s: string): string {
+	const d = new Date(s);
+	const y = d.getFullYear();
+	const m = (d.getMonth() + 1).toString().padStart(2, "0");
+	const day = d.getDate().toString().padStart(2, "0");
+	const h = d.getHours().toString().padStart(2, "0");
+	const min = d.getMinutes().toString().padStart(2, "0");
+	return `${y}-${m}-${day}T${h}:${min}:00`;
+}
+
+export async function cancelExchangeNoMatchingTime(exchangeId: string) {
+	const supabase = await createClient();
+	const {
+		data: { user },
+	} = await supabase.auth.getUser();
+	if (!user) redirect("/login");
+
+	const { data: ex } = await supabase
+		.from("exchanges")
+		.select("requester_id, status")
+		.eq("id", exchangeId)
+		.single();
+
+	if (!ex || ex.requester_id !== user.id) {
+		throw new Error("권한이 없습니다.");
+	}
+	if (ex.status !== "TIME_PROPOSED") {
+		throw new Error("이미 처리된 교환입니다.");
+	}
+
+	await revertBooksAndUpdateExchange(supabase, exchangeId, "CANCELED");
+}
+
+export async function confirmExchangeTime(
+	exchangeId: string,
+	selectedTime: string,
+) {
+	const supabase = await createClient();
+	const {
+		data: { user },
+	} = await supabase.auth.getUser();
+	if (!user) redirect("/login");
+
+	const { data: ex } = await supabase
+		.from("exchanges")
+		.select("requester_id, status, proposed_times")
+		.eq("id", exchangeId)
+		.single();
+
+	if (!ex || ex.requester_id !== user.id) {
+		throw new Error("권한이 없습니다.");
+	}
+	if (ex.status !== "TIME_PROPOSED") {
+		throw new Error("이미 처리된 교환입니다.");
+	}
+
+	const proposed = (ex.proposed_times ?? []) as string[];
+	const normalizedSelected = normalizeTimeForComparison(selectedTime);
+	const isValid = proposed.some((t) => normalizeTimeForComparison(t) === normalizedSelected);
+	if (!isValid) {
+		throw new Error("제안된 시간 중에서 선택해 주세요.");
+	}
+
+	const { error } = await supabase
+		.from("exchanges")
+		.update({
+			meet_at: selectedTime,
+			status: "SCHEDULED",
+		})
+		.eq("id", exchangeId);
+
+	if (error) throw new Error(`약속 확정 실패: ${error.message}`);
+}
+
+function normalizeTimeForComparison(t: string): string {
+	const d = new Date(t);
+	const y = d.getFullYear();
+	const m = (d.getMonth() + 1).toString().padStart(2, "0");
+	const day = d.getDate().toString().padStart(2, "0");
+	const h = d.getHours().toString().padStart(2, "0");
+	const min = d.getMinutes().toString().padStart(2, "0");
+	return `${y}-${m}-${day}T${h}:${min}:00`;
+}
+
+export async function cancelExchangeNoMatchingTime(exchangeId: string) {
+	const supabase = await createClient();
+	const {
+		data: { user },
+	} = await supabase.auth.getUser();
+	if (!user) redirect("/login");
+
+	const { data: ex } = await supabase
+		.from("exchanges")
+		.select("requester_id, status")
+		.eq("id", exchangeId)
+		.single();
+
+	if (!ex || ex.requester_id !== user.id) {
+		throw new Error("권한이 없습니다.");
+	}
+	if (ex.status !== "TIME_PROPOSED") {
+		throw new Error("이미 처리된 교환입니다.");
+	}
+
+	await revertBooksAndUpdateExchange(supabase, exchangeId, "CANCELED");
 }
 
 export async function getRequesterAvailableBooksInLibrary(

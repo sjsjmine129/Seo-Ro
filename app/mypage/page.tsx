@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import BottomNav from "@/components/BottomNav";
 import BackButton from "@/components/BackButton";
+import LogoutButton from "@/app/mypage/LogoutButton";
 import { BookOpen, ArrowRight } from "lucide-react";
 
 const ACTIVE_STATUSES = [
@@ -181,6 +182,11 @@ export default async function MyPage() {
 							)}
 						</div>
 					</section>
+
+					{/* Logout */}
+					<div className="mt-8">
+						<LogoutButton />
+					</div>
 				</main>
 			</div>
 			<BottomNav />

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { BookOpen, MapPin, X, Hourglass, MailQuestion, CalendarClock } from "lucide-react";
+import { BookOpen, MapPin, X, Hourglass, MailQuestion, CalendarClock, PartyPopper, ExternalLink } from "lucide-react";
 import {
 	cancelExchange,
 	rejectExchange,
@@ -11,6 +11,10 @@ import {
 	counterRequestExchange,
 	respondToCounterRequest,
 	getRequesterAvailableBooksInLibrary,
+	confirmExchangeTime,
+	cancelExchangeNoMatchingTime,
+	markExchangeCompleted,
+	reportNoShow,
 } from "@/app/actions/exchange";
 
 const CONDITION_LABELS: Record<string, string> = {
@@ -74,6 +78,10 @@ type ExchangeData = {
 	requester_book: BookInfo;
 	owner_book: BookInfo;
 	library: { id: string; name: string; address: string | null };
+	proposed_times?: string[] | null;
+	meet_at?: string | null;
+	requester_completed?: boolean;
+	owner_completed?: boolean;
 };
 
 type Props = {
@@ -149,7 +157,9 @@ function TimeSelectionModal({
 		const y = date.getFullYear();
 		const m = (date.getMonth() + 1).toString().padStart(2, "0");
 		const d = date.getDate().toString().padStart(2, "0");
-		return `${y}-${m}-${d}T${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}:00`;
+		const h = hour.toString().padStart(2, "0");
+		const min = minute.toString().padStart(2, "0");
+		return `${y}-${m}-${d}T${h}:${min}:00+09:00`;
 	};
 
 	const toggleSlot = (date: Date, hour: number, minute: number) => {
@@ -245,6 +255,219 @@ function TimeSelectionModal({
 						className="w-full rounded-xl bg-primary py-3 text-base font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
 					>
 						{isSubmitting ? "제안 중..." : "이 시간들로 제안하기"}
+					</button>
+				</div>
+			</div>
+		</div>
+	);
+}
+
+function toSlotKey(date: Date, hour: number, minute: number): string {
+	const y = date.getFullYear();
+	const m = (date.getMonth() + 1).toString().padStart(2, "0");
+	const d = date.getDate().toString().padStart(2, "0");
+	const h = hour.toString().padStart(2, "0");
+	const min = minute.toString().padStart(2, "0");
+	return `${y}-${m}-${d}T${h}:${min}:00+09:00`;
+}
+
+function normalizeSlotKey(s: string): string {
+	const d = new Date(s);
+	const y = d.getFullYear();
+	const m = (d.getMonth() + 1).toString().padStart(2, "0");
+	const day = d.getDate().toString().padStart(2, "0");
+	const h = d.getHours().toString().padStart(2, "0");
+	const min = d.getMinutes().toString().padStart(2, "0");
+	return `${y}-${m}-${day}T${h}:${min}:00`;
+}
+
+function TimeConfirmationModal({
+	exchangeId,
+	proposedTimes,
+	onSuccess,
+}: {
+	exchangeId: string;
+	proposedTimes: string[];
+	onSuccess: () => void;
+}) {
+	const router = useRouter();
+	const [selectedTime, setSelectedTime] = useState<string | null>(null);
+	const [isConfirming, setIsConfirming] = useState(false);
+	const [isCanceling, setIsCanceling] = useState(false);
+
+	const proposedSet = new Set(proposedTimes.map(normalizeSlotKey));
+
+	const days: Date[] = [];
+	const today = new Date();
+	today.setHours(0, 0, 0, 0);
+	for (let i = 0; i < 7; i++) {
+		const d = new Date(today);
+		d.setDate(today.getDate() + i);
+		days.push(d);
+	}
+
+	const hours = Array.from({ length: 27 }, (_, i) => {
+		const h = 7 + Math.floor(i / 2);
+		const m = (i % 2) * 30;
+		return { h, m, label: `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}` };
+	});
+
+	const handleConfirm = async () => {
+		if (!selectedTime) {
+			alert("시간을 선택해 주세요.");
+			return;
+		}
+		setIsConfirming(true);
+		try {
+			await confirmExchangeTime(exchangeId, selectedTime);
+			onSuccess();
+			router.refresh();
+		} catch (err) {
+			alert(err instanceof Error ? err.message : "확정 실패");
+		} finally {
+			setIsConfirming(false);
+		}
+	};
+
+	const handleNoMatchingTime = async () => {
+		if (
+			!window.confirm(
+				"제안받은 시간 중 맞는 시간이 없나요? 아쉽지만 교환이 취소됩니다. 7일 후에 다시 시도해보세요!",
+			)
+		)
+			return;
+		setIsCanceling(true);
+		try {
+			await cancelExchangeNoMatchingTime(exchangeId);
+			router.push("/");
+		} catch (err) {
+			alert(err instanceof Error ? err.message : "취소 실패");
+		} finally {
+			setIsCanceling(false);
+		}
+	};
+
+	return (
+		<div className="space-y-4">
+			<p className="text-sm text-muted-foreground">
+				상대방이 제안한 시간 중 하나를 선택해 주세요.
+			</p>
+			<div className="max-h-[40vh] overflow-y-auto">
+				{days.map((date) => (
+					<div key={date.toISOString()} className="mb-4">
+						<p className="mb-2 text-sm font-medium text-foreground">
+							{date.toLocaleDateString("ko-KR", {
+								month: "long",
+								day: "numeric",
+								weekday: "short",
+							})}
+						</p>
+						<div className="flex flex-wrap gap-2">
+							{hours.map(({ h, m, label }) => {
+								const key = toSlotKey(date, h, m);
+								const normalized = normalizeSlotKey(key);
+								const isAllowed = proposedSet.has(normalized);
+								const isSelected = selectedTime && normalizeSlotKey(selectedTime) === normalized;
+								const allowedTime = proposedTimes.find((t) => normalizeSlotKey(t) === normalized) ?? key;
+								return (
+									<button
+										key={key}
+										type="button"
+										disabled={!isAllowed}
+										onClick={() => isAllowed && setSelectedTime(allowedTime)}
+										className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+											!isAllowed
+												? "cursor-not-allowed bg-neutral-100 text-neutral-400 opacity-50"
+												: isSelected
+													? "border-2 border-primary bg-primary text-white"
+													: "border border-primary/40 bg-white/80 text-foreground hover:bg-primary/10"
+										}`}
+									>
+										{label}
+									</button>
+								);
+							})}
+						</div>
+					</div>
+				))}
+			</div>
+			<div className="flex flex-col gap-2">
+				<button
+					type="button"
+					onClick={handleConfirm}
+					disabled={!selectedTime || isConfirming}
+					className="w-full rounded-xl bg-primary py-3 text-base font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+				>
+					{isConfirming ? "확정 중..." : "이 시간으로 약속 확정하기"}
+				</button>
+				<button
+					type="button"
+					onClick={handleNoMatchingTime}
+					disabled={isCanceling}
+					className="w-full rounded-xl border border-red-200 bg-red-50 py-3 text-sm font-medium text-red-700 transition-colors hover:bg-red-100 disabled:opacity-50"
+				>
+					{isCanceling ? "취소 중..." : "맞는 시간이 없음 (교환 취소)"}
+				</button>
+			</div>
+		</div>
+	);
+}
+
+
+function NoShowModal({
+	onClose,
+	onSendReminder,
+	onCancelExchange,
+	isCanceling,
+}: {
+	onClose: () => void;
+	onSendReminder: () => void;
+	onCancelExchange: () => Promise<void>;
+	isCanceling: boolean;
+}) {
+	return (
+		<div
+			className="fixed inset-0 z-[9999] flex items-end justify-center bg-black/40 p-4 pb-[env(safe-area-inset-bottom)]"
+			onClick={(e) => e.target === e.currentTarget && onClose()}
+		>
+			<div
+				onClick={(e) => e.stopPropagation()}
+				className="flex w-full max-w-lg flex-col overflow-hidden rounded-t-2xl border border-white/40 bg-white/90 shadow-xl backdrop-blur-md"
+			>
+				<div className="flex items-center justify-between border-b border-white/40 px-4 py-3">
+					<h3 className="text-base font-semibold text-foreground">
+						상대방이 오지 않나요?
+					</h3>
+					<button
+						type="button"
+						onClick={onClose}
+						className="flex h-8 w-8 items-center justify-center rounded-full text-foreground/70 transition-colors hover:bg-white/60 hover:text-foreground"
+						aria-label="닫기"
+					>
+						<X className="h-5 w-5" />
+					</button>
+				</div>
+				<div className="flex flex-col gap-2 p-4">
+					<button
+						type="button"
+						onClick={() => {
+							onSendReminder();
+							onClose();
+						}}
+						className="w-full rounded-xl border border-white/40 bg-white/60 py-3 text-sm font-medium text-foreground backdrop-blur-md transition-colors hover:bg-white/80"
+					>
+						상대방에게 알림 보내기
+					</button>
+					<button
+						type="button"
+						onClick={async () => {
+							await onCancelExchange();
+							onClose();
+						}}
+						disabled={isCanceling}
+						className="w-full rounded-xl border border-red-200 bg-red-50 py-3 text-sm font-medium text-red-700 transition-colors hover:bg-red-100 disabled:opacity-50"
+					>
+						{isCanceling ? "처리 중..." : "교환 취소하기"}
 					</button>
 				</div>
 			</div>
@@ -384,6 +607,9 @@ export default function ExchangeInteractiveUI({
 	const router = useRouter();
 	const [showTimeModal, setShowTimeModal] = useState(false);
 	const [showCounterModal, setShowCounterModal] = useState(false);
+	const [showNoShowModal, setShowNoShowModal] = useState(false);
+	const [isCompleting, setIsCompleting] = useState(false);
+	const [isReportingNoShow, setIsReportingNoShow] = useState(false);
 
 	const myBook = isRequester ? exchange.requester_book : exchange.owner_book;
 	const targetBook = isRequester ? exchange.owner_book : exchange.requester_book;
@@ -416,34 +642,47 @@ export default function ExchangeInteractiveUI({
 
 	return (
 		<>
-			<main className="mx-auto w-full max-w-lg space-y-6">
+			<main className="mx-auto w-full max-w-lg space-y-4">
 				<h1 className="text-xl font-bold text-foreground">
 					교환 진행 중
 				</h1>
 
-				{/* Match-up Card */}
-				<section className="rounded-2xl border border-white/40 bg-white/60 p-4 shadow-sm backdrop-blur-md">
-					<div className="flex items-stretch gap-4">
-						<BookCard book={myBook} label="내 책" />
-						<div className="flex flex-shrink-0 items-center">
-							<span className="text-2xl text-muted-foreground">↔</span>
-						</div>
-						<BookCard book={targetBook} label="받는 책" />
-					</div>
-				</section>
-
-				{/* Location */}
-				<section className="flex items-center gap-2 rounded-xl border border-white/40 bg-white/60 px-4 py-3 backdrop-blur-md">
+				{/* Location - Above Match-up, clickable link to library */}
+				<Link
+					href={`/library/${exchange.library.id}`}
+					className="group flex items-center gap-2 rounded-xl border border-white/40 bg-white/60 px-4 py-3 backdrop-blur-md transition-colors hover:border-primary/30 hover:bg-white/80"
+				>
 					<MapPin className="h-5 w-5 flex-shrink-0 text-primary" />
-					<div>
-						<p className="font-medium text-foreground">
+					<div className="min-w-0 flex-1">
+						<p className="font-medium text-foreground transition-colors group-hover:text-primary group-hover:underline">
 							{exchange.library.name}
 						</p>
 						{exchange.library.address && (
-							<p className="text-sm text-muted-foreground">
+							<p className="text-sm text-muted-foreground truncate">
 								{exchange.library.address}
 							</p>
 						)}
+					</div>
+				</Link>
+
+				{/* Match-up Card */}
+				<section className="rounded-2xl border border-white/40 bg-white/60 p-4 shadow-sm backdrop-blur-md">
+					<div className="flex items-stretch gap-4">
+						<Link
+							href={`/book/${myBook.id}`}
+							className="flex flex-1 transition-transform hover:scale-[1.02]"
+						>
+							<BookCard book={myBook} label="내 책" />
+						</Link>
+						<div className="flex flex-shrink-0 items-center">
+							<span className="text-2xl text-muted-foreground">↔</span>
+						</div>
+						<Link
+							href={`/book/${targetBook.id}`}
+							className="flex flex-1 transition-transform hover:scale-[1.02]"
+						>
+							<BookCard book={targetBook} label="받는 책" />
+						</Link>
 					</div>
 				</section>
 
@@ -506,6 +745,12 @@ export default function ExchangeInteractiveUI({
 								icon={CalendarClock}
 								title="상대방이 편한 시간을 고르고 있어요."
 								description="제안하신 시간 중 하나를 상대방이 선택하면 교환 약속이 최종 확정됩니다!"
+							/>
+						) : isRequester && (exchange.proposed_times?.length ?? 0) > 0 ? (
+							<TimeConfirmationModal
+								exchangeId={exchange.id}
+								proposedTimes={exchange.proposed_times ?? []}
+								onSuccess={() => router.refresh()}
 							/>
 						) : (
 							<p className="text-sm text-muted-foreground">
@@ -592,8 +837,130 @@ export default function ExchangeInteractiveUI({
 					</section>
 				)}
 
-				{/* Other statuses: ACCEPTED, SCHEDULED, COMPLETED */}
-				{!["REQUESTED", "TIME_PROPOSED", "COUNTER_REQUESTED", "REJECTED", "CANCELED"].includes(
+				{/* Status: SCHEDULED - Appointment Ticket */}
+				{exchange.status === "SCHEDULED" && (
+					<section>
+						<div className="overflow-hidden rounded-2xl border-2 border-primary/30 bg-gradient-to-br from-white/90 to-primary/5 p-4 shadow-lg shadow-primary/5 backdrop-blur-md">
+							<div className="mb-3 flex items-center gap-3">
+								<div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/20">
+									<PartyPopper className="h-6 w-6 text-primary" strokeWidth={2} />
+								</div>
+								<h3 className="text-lg font-bold text-foreground">
+									교환 약속이 확정되었습니다!
+								</h3>
+							</div>
+							<div className="space-y-3 rounded-xl border border-white/40 bg-white/60 p-4 backdrop-blur-md">
+								{exchange.meet_at && (
+									<div>
+										<p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+											날짜 & 시간
+										</p>
+										<p className="text-base font-semibold text-foreground">
+											{new Date(exchange.meet_at).toLocaleDateString("ko-KR", {
+												year: "numeric",
+												month: "long",
+												day: "numeric",
+												weekday: "long",
+											})}{" "}
+											{new Date(exchange.meet_at).toLocaleTimeString("ko-KR", {
+												hour: "2-digit",
+												minute: "2-digit",
+											})}
+										</p>
+									</div>
+								)}
+								<div>
+									<p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+										장소
+									</p>
+									<a
+										href={`https://map.naver.com/v5/search/${encodeURIComponent(
+											exchange.library.address
+												? `${exchange.library.name} ${exchange.library.address}`
+												: exchange.library.name,
+										)}`}
+										target="_blank"
+										rel="noopener noreferrer"
+										className="inline-flex items-center gap-1.5 text-base font-semibold text-blue-600 hover:underline"
+									>
+										{exchange.library.name}
+										<ExternalLink className="h-4 w-4 flex-shrink-0" strokeWidth={2} />
+									</a>
+									{exchange.library.address && (
+										<p className="mt-0.5 text-sm text-muted-foreground">
+											{exchange.library.address}
+										</p>
+									)}
+								</div>
+							</div>
+							<p className="mt-3 text-center text-sm text-muted-foreground">
+								약속된 장소에서 만나 책을 교환한 후, 아래 버튼을 눌러주세요.
+							</p>
+							{(() => {
+								const isBeforeMeeting = exchange.meet_at ? new Date() < new Date(exchange.meet_at) : false;
+								return (
+									<div className="mt-3 flex flex-col gap-2">
+										<button
+											type="button"
+											onClick={async () => {
+												if (isBeforeMeeting) {
+													alert("약속 시간이 지난 후에 누를 수 있습니다.");
+													return;
+												}
+												if (!window.confirm("교환을 완료 하시겠습니까?")) return;
+												setIsCompleting(true);
+												try {
+													await markExchangeCompleted(exchange.id, isRequester ? "requester" : "owner");
+													router.refresh();
+												} catch (err) {
+													alert(err instanceof Error ? err.message : "확인 실패");
+												} finally {
+													setIsCompleting(false);
+												}
+											}}
+											disabled={
+												isCompleting ||
+												(isRequester ? exchange.requester_completed : exchange.owner_completed)
+											}
+											className={`w-full rounded-xl border py-3 text-base font-semibold backdrop-blur-md transition-opacity disabled:cursor-not-allowed disabled:opacity-60 disabled:bg-neutral-400 disabled:text-white ${
+												isBeforeMeeting
+													? "border-neutral-400 bg-neutral-400 text-white opacity-70"
+													: "border-white/40 bg-primary text-white hover:opacity-90"
+											}`}
+										>
+											{(isRequester ? exchange.requester_completed : exchange.owner_completed)
+												? "상대방의 완료를 기다리는 중입니다"
+												: isCompleting
+													? "처리 중..."
+													: "교환 완료!"}
+										</button>
+										<button
+											type="button"
+											onClick={() => {
+												if (isBeforeMeeting) {
+													alert("약속 시간이 지난 후에 누를 수 있습니다.");
+													return;
+												}
+												setShowNoShowModal(true);
+											}}
+											disabled={isCompleting || isReportingNoShow}
+											className={`w-full rounded-xl border-2 py-3 text-sm font-medium backdrop-blur-md transition-colors disabled:cursor-not-allowed disabled:opacity-60 disabled:text-red-700 ${
+												isBeforeMeeting
+													? "border-neutral-300 bg-transparent text-neutral-400 opacity-70"
+													: "border-red-300 bg-transparent text-red-700 hover:bg-red-50"
+											}`}
+										>
+											{isReportingNoShow ? "처리 중..." : "상대방이 오지 않아요"}
+										</button>
+									</div>
+								);
+							})()}
+						</div>
+					</section>
+				)}
+
+				{/* Other statuses: ACCEPTED, COMPLETED */}
+				{!["REQUESTED", "TIME_PROPOSED", "COUNTER_REQUESTED", "REJECTED", "CANCELED", "SCHEDULED"].includes(
 					exchange.status,
 				) && (
 					<section className="rounded-2xl border border-white/40 bg-white/60 p-4 shadow-sm backdrop-blur-md">
@@ -622,6 +989,31 @@ export default function ExchangeInteractiveUI({
 						setShowCounterModal(false);
 						router.refresh();
 					}}
+				/>
+			)}
+			{showNoShowModal && (
+				<NoShowModal
+					onClose={() => setShowNoShowModal(false)}
+					onSendReminder={() => {
+						alert("상대방에게 알림을 보냈습니다.");
+					}}
+					onCancelExchange={async () => {
+						setIsReportingNoShow(true);
+						try {
+							await reportNoShow(
+								exchange.id,
+								exchange.requester_book.id,
+								exchange.owner_book.id,
+							);
+							setShowNoShowModal(false);
+							router.refresh();
+						} catch (err) {
+							alert(err instanceof Error ? err.message : "처리 실패");
+						} finally {
+							setIsReportingNoShow(false);
+						}
+					}}
+					isCanceling={isReportingNoShow}
 				/>
 			)}
 		</>

@@ -14,6 +14,8 @@ type ExchangeDetail = {
 	library_id: string;
 	meet_at: string | null;
 	proposed_times: string[] | null;
+	requester_completed: boolean;
+	owner_completed: boolean;
 	requester_book: {
 		id: string;
 		title: string;
@@ -42,7 +44,7 @@ async function getExchangeDetail(
 		.from("exchanges")
 		.select(
 			`
-			id, status, requester_id, owner_id, requester_book_id, owner_book_id, library_id, meet_at, proposed_times,
+			id, status, requester_id, owner_id, requester_book_id, owner_book_id, library_id, meet_at, proposed_times, requester_completed, owner_completed,
 			requester_book:books!requester_book_id(id, title, thumbnail_url, condition),
 			owner_book:books!owner_book_id(id, title, thumbnail_url, condition),
 			library:libraries(id, name, address)
@@ -80,7 +82,7 @@ export default async function ExchangePage({
 	return (
 		<>
 			<div className="flex min-h-screen flex-col px-4 pb-32 pt-4">
-				<div className="mb-4">
+				<div className="mb-3">
 					<BackButton />
 				</div>
 				<main className="mx-auto w-full max-w-lg">
