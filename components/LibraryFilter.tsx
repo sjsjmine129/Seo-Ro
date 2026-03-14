@@ -50,7 +50,7 @@ export default function LibraryFilter({
 
 	const handleSearchClick = () => {
 		setIsOpen(false);
-		router.push("/search");
+		router.push("/search?tab=library");
 	};
 
 	return (

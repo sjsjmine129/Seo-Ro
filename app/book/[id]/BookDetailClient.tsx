@@ -139,7 +139,9 @@ export default function BookDetailClient({
 										<button
 											type="button"
 											onClick={handleDelete}
-											disabled={book.status !== "AVAILABLE"}
+											disabled={
+												book.status !== "AVAILABLE"
+											}
 											className={`mt-0.5 flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium transition-colors ${
 												book.status === "AVAILABLE"
 													? "text-red-600 hover:bg-red-50"

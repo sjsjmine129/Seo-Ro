@@ -1,6 +1,6 @@
 "use server";
 
-import { createClient } from "@/utils/supabase/server";
+import { createClient, createServiceRoleClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
 
 export async function requestExchange(
@@ -478,10 +478,14 @@ export async function markExchangeCompleted(
 		updated?.requester_completed === true &&
 		updated?.owner_completed === true
 	) {
-		await supabase
+		// Use service role to update BOTH books (RLS restricts anon to own books only)
+		const admin = createServiceRoleClient();
+		const { error: booksError } = await admin
 			.from("books")
 			.update({ status: "SWAPPED" })
 			.in("id", [ex.requester_book_id, ex.owner_book_id]);
+
+		if (booksError) throw new Error("Failed to update books status.");
 
 		await supabase
 			.from("exchanges")
