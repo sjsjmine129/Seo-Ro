@@ -6,7 +6,9 @@ import { useRouter } from "next/navigation";
 import { User, Quote, Trash2 } from "lucide-react";
 import BackButton from "@/components/BackButton";
 import BookImageCarousel from "@/components/BookImageCarousel";
-import ConditionBadgeWithTooltip from "@/components/ConditionBadgeWithTooltip";
+import ConditionBadgeWithTooltip, {
+	CONDITION_DESCRIPTIONS,
+} from "@/components/ConditionBadgeWithTooltip";
 import LibraryLocationsBadge from "./components/LibraryLocationsBadge";
 import type { LibraryItem } from "./components/LibraryLocationsBadge";
 import SelectMyBookModal from "./components/SelectMyBookModal";
@@ -18,6 +20,7 @@ type BookDetailClientProps = {
 		title: string;
 		authors: string | null;
 		publisher: string | null;
+		thumbnail_url: string | null;
 		user_images: string[];
 		user_review: string | null;
 		condition: string;
@@ -87,7 +90,10 @@ export default function BookDetailClient({
 					{/* Image Carousel */}
 					<div className="overflow-hidden rounded-2xl border border-white/40 bg-white/60 shadow-sm">
 						<BookImageCarousel
-							images={book.user_images ?? []}
+							images={[
+								book.thumbnail_url,
+								...(book.user_images ?? []),
+							].filter(Boolean) as string[]}
 							alt={book.title}
 						/>
 					</div>
@@ -97,14 +103,23 @@ export default function BookDetailClient({
 						<div className="flex justify-between items-start gap-4">
 							{/* Left: Title + Badge, then Author/Publisher */}
 							<div className="min-w-0 flex-1 flex flex-col">
-								<div className="flex items-center gap-2 flex-wrap">
-									<h1 className="text-xl font-bold text-foreground">
-										{book.title}
-									</h1>
-									<ConditionBadgeWithTooltip
-										label={conditionLabel}
-										className={conditionColor}
-									/>
+								<div className="flex flex-col gap-1">
+									<div className="flex items-center gap-2 flex-wrap">
+										<h1 className="text-xl font-bold text-foreground">
+											{book.title}
+										</h1>
+										<div className="flex items-center gap-2">
+											<ConditionBadgeWithTooltip
+												label={conditionLabel}
+												className={conditionColor}
+											/>
+											{CONDITION_DESCRIPTIONS[book.condition] && (
+												<span className="text-sm text-neutral-500">
+													{CONDITION_DESCRIPTIONS[book.condition]}
+												</span>
+											)}
+										</div>
+									</div>
 								</div>
 								<div className="mt-1 flex flex-col gap-0.5 text-sm text-foreground/70">
 									{book.authors && (
@@ -139,7 +154,9 @@ export default function BookDetailClient({
 										<button
 											type="button"
 											onClick={handleDelete}
-											disabled={book.status !== "AVAILABLE"}
+											disabled={
+												book.status !== "AVAILABLE"
+											}
 											className={`mt-0.5 flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium transition-colors ${
 												book.status === "AVAILABLE"
 													? "text-red-600 hover:bg-red-50"

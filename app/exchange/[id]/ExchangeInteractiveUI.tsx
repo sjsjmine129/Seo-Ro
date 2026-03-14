@@ -415,46 +415,41 @@ function TimeConfirmationModal({
 
 
 function NoShowModal({
+	isOpen,
 	onClose,
 	onSendReminder,
 	onCancelExchange,
-	isCanceling,
+	isReporting,
 }: {
+	isOpen: boolean;
 	onClose: () => void;
 	onSendReminder: () => void;
 	onCancelExchange: () => Promise<void>;
-	isCanceling: boolean;
+	isReporting: boolean;
 }) {
+	if (!isOpen) return null;
 	return (
 		<div
-			className="fixed inset-0 z-[9999] flex items-end justify-center bg-black/40 p-4 pb-[env(safe-area-inset-bottom)]"
+			className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 p-4"
 			onClick={(e) => e.target === e.currentTarget && onClose()}
 		>
 			<div
 				onClick={(e) => e.stopPropagation()}
-				className="flex w-full max-w-lg flex-col overflow-hidden rounded-t-2xl border border-white/40 bg-white/90 shadow-xl backdrop-blur-md"
+				className="w-full max-w-lg overflow-hidden rounded-2xl border border-white/40 bg-white/90 shadow-xl backdrop-blur-md"
 			>
-				<div className="flex items-center justify-between border-b border-white/40 px-4 py-3">
+				<div className="border-b border-white/40 px-4 py-3">
 					<h3 className="text-base font-semibold text-foreground">
 						상대방이 오지 않나요?
 					</h3>
-					<button
-						type="button"
-						onClick={onClose}
-						className="flex h-8 w-8 items-center justify-center rounded-full text-foreground/70 transition-colors hover:bg-white/60 hover:text-foreground"
-						aria-label="닫기"
-					>
-						<X className="h-5 w-5" />
-					</button>
+					<p className="mt-1.5 text-sm text-muted-foreground">
+						상대방이 깜빡했을 수 있어요. 알림을 먼저 보내보시겠어요? 취소하면 교환이 종료됩니다.
+					</p>
 				</div>
 				<div className="flex flex-col gap-2 p-4">
 					<button
 						type="button"
-						onClick={() => {
-							onSendReminder();
-							onClose();
-						}}
-						className="w-full rounded-xl border border-white/40 bg-white/60 py-3 text-sm font-medium text-foreground backdrop-blur-md transition-colors hover:bg-white/80"
+						onClick={() => onSendReminder()}
+						className="w-full rounded-xl bg-primary py-3 text-sm font-medium text-white transition-opacity hover:opacity-90"
 					>
 						상대방에게 알림 보내기
 					</button>
@@ -464,10 +459,17 @@ function NoShowModal({
 							await onCancelExchange();
 							onClose();
 						}}
-						disabled={isCanceling}
+						disabled={isReporting}
 						className="w-full rounded-xl border border-red-200 bg-red-50 py-3 text-sm font-medium text-red-700 transition-colors hover:bg-red-100 disabled:opacity-50"
 					>
-						{isCanceling ? "처리 중..." : "교환 취소하기"}
+						{isReporting ? "처리 중..." : "교환 취소하기"}
+					</button>
+					<button
+						type="button"
+						onClick={onClose}
+						className="mt-1 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
+					>
+						닫기
 					</button>
 				</div>
 			</div>
@@ -959,8 +961,31 @@ export default function ExchangeInteractiveUI({
 					</section>
 				)}
 
-				{/* Other statuses: ACCEPTED, COMPLETED */}
-				{!["REQUESTED", "TIME_PROPOSED", "COUNTER_REQUESTED", "REJECTED", "CANCELED", "SCHEDULED"].includes(
+				{/* Status: COMPLETED - Exchange Success */}
+				{exchange.status === "COMPLETED" && (
+					<section className="overflow-hidden rounded-2xl border-2 border-primary/30 bg-gradient-to-br from-white/90 to-primary/5 p-4 shadow-lg shadow-primary/5 backdrop-blur-md">
+						<div className="mb-3 flex items-center gap-3">
+							<div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/20">
+								<PartyPopper className="h-6 w-6 text-primary" strokeWidth={2} />
+							</div>
+							<h3 className="text-lg font-bold text-foreground">
+								교환이 성공적으로 완료되었습니다!
+							</h3>
+						</div>
+						<p className="mb-4 text-sm leading-relaxed text-muted-foreground">
+							서로(Seo-Ro)에서 책을 나눈 보상으로 책장 점수 2점이 지급되었습니다. 다음 교환도 기대할게요!
+						</p>
+						<Link
+							href="/"
+							className="block w-full rounded-xl bg-primary py-3 text-center text-base font-semibold text-white transition-opacity hover:opacity-90"
+						>
+							홈으로 돌아가기
+						</Link>
+					</section>
+				)}
+
+				{/* Other statuses: ACCEPTED */}
+				{!["REQUESTED", "TIME_PROPOSED", "COUNTER_REQUESTED", "REJECTED", "CANCELED", "SCHEDULED", "COMPLETED"].includes(
 					exchange.status,
 				) && (
 					<section className="rounded-2xl border border-white/40 bg-white/60 p-4 shadow-sm backdrop-blur-md">
@@ -993,9 +1018,11 @@ export default function ExchangeInteractiveUI({
 			)}
 			{showNoShowModal && (
 				<NoShowModal
+					isOpen={showNoShowModal}
 					onClose={() => setShowNoShowModal(false)}
 					onSendReminder={() => {
 						alert("상대방에게 알림을 보냈습니다.");
+						setShowNoShowModal(false);
 					}}
 					onCancelExchange={async () => {
 						setIsReportingNoShow(true);
@@ -1013,7 +1040,7 @@ export default function ExchangeInteractiveUI({
 							setIsReportingNoShow(false);
 						}
 					}}
-					isCanceling={isReportingNoShow}
+					isReporting={isReportingNoShow}
 				/>
 			)}
 		</>
