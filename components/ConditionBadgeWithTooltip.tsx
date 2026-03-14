@@ -2,8 +2,18 @@
 
 import { useState, useRef, useEffect } from "react";
 
-const TOOLTIP_TEXT =
-	"S: 새 책, A: 거의 새 책, B: 사용감 있음, C: 헌 책, D: 파손 있음";
+/** Condition descriptions - shared by tooltip and Book Detail Page */
+export const CONDITION_DESCRIPTIONS: Record<string, string> = {
+	S: "새 책",
+	A: "거의 새 책",
+	B: "사용감 있음",
+	C: "헌 책",
+	D: "파손 있음",
+};
+
+const TOOLTIP_TEXT = Object.entries(CONDITION_DESCRIPTIONS)
+	.map(([k, v]) => `${k}: ${v}`)
+	.join(", ");
 
 type ConditionBadgeWithTooltipProps = {
 	label: string;

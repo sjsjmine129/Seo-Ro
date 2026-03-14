@@ -26,6 +26,7 @@ type BookDetail = {
 	title: string;
 	authors: string | null;
 	publisher: string | null;
+	thumbnail_url: string | null;
 	user_images: string[];
 	user_review: string | null;
 	condition: string;
@@ -53,7 +54,7 @@ async function getBookDetail(
 		.from("books")
 		.select(
 			`
-			id, owner_id, title, authors, publisher, user_images, user_review, condition, status,
+			id, owner_id, title, authors, publisher, thumbnail_url, user_images, user_review, condition, status,
 			owner:users!owner_id(nickname, profile_image, bookshelf_score),
 			book_libraries(library_id, libraries(id, name, address))
 		`,
