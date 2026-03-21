@@ -16,6 +16,10 @@ export const metadata: Metadata = {
   title: "Seo-Ro | A Station where Books meet People",
   description: "Location-based P2P book exchange at public libraries",
   manifest: "/manifest.json",
+  icons: {
+    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
+    apple: [{ url: "/apple-icon.png", type: "image/png" }],
+  },
 };
 
 export default function RootLayout({
