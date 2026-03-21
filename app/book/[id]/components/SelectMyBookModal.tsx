@@ -125,9 +125,9 @@ export default function SelectMyBookModal({
 		>
 			<div
 				onClick={(e) => e.stopPropagation()}
-				className="flex w-full max-w-lg flex-col overflow-hidden rounded-t-2xl border border-white/40 bg-[#F9F5EB]/95 shadow-xl backdrop-blur-md"
+				className="flex w-full max-w-lg flex-col overflow-hidden rounded-t-2xl border border-primary/20 bg-background/95 shadow-xl backdrop-blur-md"
 			>
-				<div className="flex items-center justify-between border-b border-white/40 px-4 py-3">
+				<div className="flex items-center justify-between border-b border-primary/20 px-4 py-3">
 					{step !== "library" ? (
 						<button
 							type="button"
@@ -164,7 +164,7 @@ export default function SelectMyBookModal({
 									<button
 										type="button"
 										onClick={() => handleSelectLibrary(lib)}
-										className="flex w-full items-center justify-between rounded-xl border border-white/40 bg-white/60 px-4 py-3 text-left transition-colors hover:bg-white/80"
+										className="flex w-full items-center justify-between rounded-xl border border-primary/20 bg-white/60 px-4 py-3 text-left transition-colors hover:bg-white/80"
 									>
 										<span className="font-medium text-foreground">{lib.name}</span>
 										<ChevronRight className="h-5 w-5 text-foreground/50" />
@@ -207,7 +207,7 @@ export default function SelectMyBookModal({
 											<button
 												type="button"
 												onClick={() => handleSelectBook(book.id)}
-												className="flex w-full items-center gap-3 rounded-xl border border-white/40 bg-white/60 p-3 text-left transition-colors hover:bg-white/80"
+												className="flex w-full items-center gap-3 rounded-xl border border-primary/20 bg-white/60 p-3 text-left transition-colors hover:bg-white/80"
 											>
 												<div className="h-14 w-10 flex-shrink-0 overflow-hidden rounded bg-neutral-200">
 													{book.thumbnail_url ? (

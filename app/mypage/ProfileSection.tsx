@@ -62,7 +62,7 @@ export default function ProfileSection({
 								e.stopPropagation();
 								setShowEditModal(true);
 							}}
-							className="mt-3 rounded-full border border-white/40 bg-white/60 px-4 py-1.5 text-sm font-medium text-foreground shadow-sm transition hover:bg-white/80"
+							className="mt-3 rounded-full border border-primary/20 bg-white/60 px-4 py-1.5 text-sm font-medium text-foreground shadow-sm transition hover:bg-white/80"
 							aria-label="프로필 수정"
 						>
 							프로필 수정

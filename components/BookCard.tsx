@@ -26,7 +26,7 @@ export default function BookCard({
 	return (
 		<Link
 			href={`/book/${id}`}
-			className={`block rounded-2xl border border-white/40 bg-white/90 p-4 shadow-sm backdrop-blur-md transition-opacity hover:opacity-90 ${
+			className={`block rounded-2xl border border-primary/20 bg-glass-bg p-4 shadow-sm backdrop-blur-md transition-opacity hover:opacity-90 ${
 				isSwapped ? "opacity-60" : ""
 			}`}
 		>

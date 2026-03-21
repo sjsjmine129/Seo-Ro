@@ -1,23 +1,31 @@
 @import "tailwindcss";
 
-/* Seo-Ro "Frosted Paper" design system (UI_SPECS.md) */
+/* Seo-Ro design system – Lavender/Violet theme (from app icon) */
 :root {
-  --background: #F9F5EB;   /* Warm Beige */
-  --foreground: #1a1a1a;
-  --primary: #2F5233;      /* Forest Green */
-  --accent: #C15B46;       /* Terracotta */
+  --background: #FAF9FF;   /* Light Lavender (subtle violet tint) */
+  --foreground: #1F1F1F;  /* Deep Charcoal (book color) */
+  --primary: #847DFF;     /* Vibrant Lavender/Violet */
+  --primary-foreground: #FFFFFF;
+  --accent: #6B63E6;      /* Darker Violet (hover/secondary accents) */
+  --muted-foreground: #71717a;  /* Softer charcoal for secondary text */
+  --glass-border: rgb(132 125 255 / 0.2);  /* Subtle primary violet tint */
+  --glass-bg: rgb(255 255 255 / 0.92);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
   --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-glass-border: var(--glass-border);
+  --color-glass-bg: var(--glass-bg);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-/* Frosted Paper glassmorphism: use with bg-white/90 backdrop-blur-md border border-white/40 */
+/* Glassmorphism: bg-glass-bg backdrop-blur-md border-glass-border (subtle violet tint) */
 body {
   background: var(--background);
   color: var(--foreground);

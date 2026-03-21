@@ -59,7 +59,7 @@ export default function ConditionBadgeWithTooltip({
 			</button>
 			{(isOpen || undefined) && (
 				<div
-					className="absolute left-0 top-full z-[100] mt-1.5 min-w-[240px] rounded-lg border border-white/40 bg-white/95 px-3 py-2.5 text-left text-xs leading-relaxed text-foreground shadow-lg backdrop-blur-md"
+					className="absolute left-0 top-full z-[100] mt-1.5 min-w-[240px] rounded-lg border border-primary/20 bg-white/95 px-3 py-2.5 text-left text-xs leading-relaxed text-foreground shadow-lg backdrop-blur-md"
 					role="tooltip"
 				>
 					{TOOLTIP_TEXT}

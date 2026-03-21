@@ -69,9 +69,9 @@ export default function ProfileEditModal({
 		>
 			<div
 				onClick={(e) => e.stopPropagation()}
-				className="w-full max-w-sm overflow-hidden rounded-2xl border border-white/40 bg-white/90 shadow-xl backdrop-blur-md"
+				className="w-full max-w-sm overflow-hidden rounded-2xl border border-primary/20 bg-white/90 shadow-xl backdrop-blur-md"
 			>
-				<div className="flex items-center justify-between border-b border-white/40 px-4 py-3">
+				<div className="flex items-center justify-between border-b border-primary/20 px-4 py-3">
 					<h3 className="text-base font-semibold text-foreground">
 						프로필 수정
 					</h3>

@@ -150,7 +150,7 @@ export default async function LibraryDetailPage({
 					{books.length === 0 ? (
 						<Link
 							href={`/shelve?libraryId=${id}`}
-							className="block rounded-xl border border-white/40 bg-white/60 py-8 text-center text-sm text-foreground/60 transition-opacity hover:opacity-90"
+							className="block rounded-xl border border-primary/20 bg-white/60 py-8 text-center text-sm text-foreground/60 transition-opacity hover:opacity-90"
 						>
 							등록된 책이 없습니다. <br />이 도서관에 제일 먼저
 							책을 꽂아주세요!
@@ -161,7 +161,7 @@ export default async function LibraryDetailPage({
 								<Link
 									key={book.id}
 									href={`/book/${book.id}`}
-									className="flex w-[110px] flex-none flex-col overflow-hidden rounded-xl border border-white/40 bg-white/90 shadow-sm backdrop-blur-md sm:w-[130px]"
+									className="flex w-[110px] flex-none flex-col overflow-hidden rounded-xl border border-primary/20 bg-white/90 shadow-sm backdrop-blur-md sm:w-[130px]"
 								>
 									<div className="relative aspect-[3/4] w-full bg-neutral-200">
 										{book.thumbnail_url ? (

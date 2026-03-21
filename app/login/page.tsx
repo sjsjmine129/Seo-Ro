@@ -32,7 +32,7 @@ export default function LoginPage() {
         </div>
 
         {/* Glassmorphism Card */}
-        <div className="rounded-2xl border border-white/40 bg-white/60 p-6 shadow-md backdrop-blur-md">
+        <div className="rounded-2xl border border-primary/20 bg-white/60 p-6 shadow-md backdrop-blur-md">
           <div className="mb-4 flex gap-2">
             <button
               type="button"
@@ -82,7 +82,7 @@ export default function LoginPage() {
                 required
                 autoComplete="email"
                 placeholder="example@email.com"
-                className="w-full rounded-lg border border-white/40 bg-white/80 px-4 py-2.5 text-foreground placeholder:text-foreground/40 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                className="w-full rounded-lg border border-primary/20 bg-white/80 px-4 py-2.5 text-foreground placeholder:text-foreground/40 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
 
@@ -101,7 +101,7 @@ export default function LoginPage() {
                   required={isSignup}
                   autoComplete="nickname"
                   placeholder="닉네임을 입력하세요"
-                  className="w-full rounded-lg border border-white/40 bg-white/80 px-4 py-2.5 text-foreground placeholder:text-foreground/40 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                  className="w-full rounded-lg border border-primary/20 bg-white/80 px-4 py-2.5 text-foreground placeholder:text-foreground/40 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                 />
               </div>
             )}
@@ -120,7 +120,7 @@ export default function LoginPage() {
                 required
                 autoComplete={isSignup ? 'new-password' : 'current-password'}
                 placeholder="••••••••"
-                className="w-full rounded-lg border border-white/40 bg-white/80 px-4 py-2.5 text-foreground placeholder:text-foreground/40 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                className="w-full rounded-lg border border-primary/20 bg-white/80 px-4 py-2.5 text-foreground placeholder:text-foreground/40 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
 

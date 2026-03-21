@@ -1,0 +1,23 @@
+{
+  "name": "Seo-Ro (서로)",
+  "short_name": "Seo-Ro",
+  "description": "Location-based P2P book exchange at public libraries",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FAF9FF",
+  "theme_color": "#847DFF",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

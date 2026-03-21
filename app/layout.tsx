@@ -15,6 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Seo-Ro | A Station where Books meet People",
   description: "Location-based P2P book exchange at public libraries",
+  manifest: "/manifest.json",
 };
 
 export default function RootLayout({
