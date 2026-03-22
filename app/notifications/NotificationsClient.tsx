@@ -10,6 +10,7 @@ import {
 	type Notification,
 } from "@/app/actions/notifications";
 import NotificationItem from "./NotificationItem";
+import PushPrompt from "./PushPrompt";
 import BottomNav from "@/components/BottomNav";
 
 export default function NotificationsClient() {
@@ -67,6 +68,11 @@ export default function NotificationsClient() {
 						</button>
 					</div>
 				</header>
+
+				{/* Push prompt */}
+				<div className="w-full px-4 pt-4">
+					<PushPrompt />
+				</div>
 
 				{/* List: padded content */}
 				<div className="w-full space-y-3 px-4 py-4">

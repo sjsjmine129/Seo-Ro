@@ -2,6 +2,7 @@
 
 import { createClient, createServiceRoleClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
+import { sendPushToUser } from "@/lib/push";
 
 export type NotificationType =
 	| "REQUEST"
@@ -44,6 +45,16 @@ export async function insertNotification(
 		link: link ?? null,
 	});
 	if (error) console.error("[notifications] insert failed:", error.message);
+
+	try {
+		await sendPushToUser(userId, {
+			title,
+			body: message,
+			url: link ?? "/",
+		});
+	} catch {
+		// Push fails silently (e.g. user not subscribed, VAPID not configured)
+	}
 }
 
 /** Insert notifications for multiple users */
@@ -64,6 +75,18 @@ export async function insertNotificationsForUsers(
 	}));
 	const { error } = await supabase.from("notifications").insert(rows);
 	if (error) console.error("[notifications] bulk insert failed:", error.message);
+
+	for (const userId of userIds) {
+		try {
+			await sendPushToUser(userId, {
+				title,
+				body: message,
+				url: link ?? "/",
+			});
+		} catch {
+			// Push fails silently (e.g. user not subscribed, VAPID not configured)
+		}
+	}
 }
 
 export async function getUnreadCount(): Promise<number> {
