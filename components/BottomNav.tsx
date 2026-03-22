@@ -1,24 +1,26 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, Search, BookPlus, Bell, User } from "lucide-react";
+import { getUnreadCount } from "@/app/actions/notifications";
 
 const NAV_ITEMS = [
 	{ href: "/", label: "Home", icon: Home },
 	{ href: "/search", label: "Search", icon: Search },
 	{ href: "/shelve", label: "Shelve", icon: BookPlus, isFab: true },
-	{
-		href: "/notifications",
-		label: "Notifications",
-		icon: Bell,
-		showDot: true,
-	},
+	{ href: "/notifications", label: "Notifications", icon: Bell },
 	{ href: "/mypage", label: "My Page", icon: User },
 ] as const;
 
 export default function BottomNav() {
 	const pathname = usePathname();
+	const [unreadCount, setUnreadCount] = useState(0);
+
+	useEffect(() => {
+		getUnreadCount().then(setUnreadCount);
+	}, [pathname]);
 
 	return (
 		<nav
@@ -65,11 +67,13 @@ export default function BottomNav() {
 									strokeWidth={2}
 									aria-hidden
 								/>
-								{item.showDot && (
+								{item.href === "/notifications" && unreadCount > 0 && (
 									<span
-										className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-accent"
-										aria-hidden
-									/>
+										className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold text-white"
+										aria-label={`${unreadCount} unread notifications`}
+									>
+										{unreadCount > 99 ? "99+" : unreadCount}
+									</span>
 								)}
 							</span>
 							<span className="text-[10px] font-medium">

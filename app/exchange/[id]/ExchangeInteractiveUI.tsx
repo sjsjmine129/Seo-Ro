@@ -6,6 +6,7 @@ import Link from "next/link";
 import { BookOpen, MapPin, X, Hourglass, MailQuestion, CalendarClock, PartyPopper, ExternalLink } from "lucide-react";
 import {
 	cancelExchange,
+	cancelScheduledExchange,
 	rejectExchange,
 	proposeTimes,
 	counterRequestExchange,
@@ -15,6 +16,7 @@ import {
 	cancelExchangeNoMatchingTime,
 	markExchangeCompleted,
 	reportNoShow,
+	sendManualReminder,
 } from "@/app/actions/exchange";
 
 const CONDITION_LABELS: Record<string, string> = {
@@ -339,6 +341,7 @@ function TimeConfirmationModal({
 		setIsCanceling(true);
 		try {
 			await cancelExchangeNoMatchingTime(exchangeId);
+			router.refresh();
 			router.push("/");
 		} catch (err) {
 			alert(err instanceof Error ? err.message : "취소 실패");
@@ -420,12 +423,14 @@ function NoShowModal({
 	onSendReminder,
 	onCancelExchange,
 	isReporting,
+	isSendingReminder,
 }: {
 	isOpen: boolean;
 	onClose: () => void;
-	onSendReminder: () => void;
+	onSendReminder: () => Promise<void>;
 	onCancelExchange: () => Promise<void>;
 	isReporting: boolean;
+	isSendingReminder: boolean;
 }) {
 	if (!isOpen) return null;
 	return (
@@ -448,10 +453,13 @@ function NoShowModal({
 				<div className="flex flex-col gap-2 p-4">
 					<button
 						type="button"
-						onClick={() => onSendReminder()}
-						className="w-full rounded-xl bg-primary py-3 text-sm font-medium text-white transition-opacity hover:opacity-90"
+						onClick={async () => {
+							await onSendReminder();
+						}}
+						disabled={isSendingReminder}
+						className="w-full rounded-xl bg-primary py-3 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
 					>
-						상대방에게 알림 보내기
+						{isSendingReminder ? "보내는 중..." : "상대방에게 알림 보내기"}
 					</button>
 					<button
 						type="button"
@@ -612,6 +620,7 @@ export default function ExchangeInteractiveUI({
 	const [showNoShowModal, setShowNoShowModal] = useState(false);
 	const [isCompleting, setIsCompleting] = useState(false);
 	const [isReportingNoShow, setIsReportingNoShow] = useState(false);
+	const [isSendingReminder, setIsSendingReminder] = useState(false);
 
 	const myBook = isRequester ? exchange.requester_book : exchange.owner_book;
 	const targetBook = isRequester ? exchange.owner_book : exchange.requester_book;
@@ -621,6 +630,7 @@ export default function ExchangeInteractiveUI({
 		if (!window.confirm("교환을 취소하시겠습니까?")) return;
 		try {
 			await cancelExchange(exchange.id);
+			router.refresh();
 			router.push("/");
 		} catch (err) {
 			alert(err instanceof Error ? err.message : "취소 실패");
@@ -631,6 +641,7 @@ export default function ExchangeInteractiveUI({
 		if (!window.confirm("교환 요청을 거절하시겠습니까?")) return;
 		try {
 			await rejectExchange(exchange.id);
+			router.refresh();
 			router.push("/");
 		} catch (err) {
 			alert(err instanceof Error ? err.message : "거절 실패");
@@ -954,6 +965,28 @@ export default function ExchangeInteractiveUI({
 										>
 											{isReportingNoShow ? "처리 중..." : "상대방이 오지 않아요"}
 										</button>
+										<button
+											type="button"
+											onClick={async () => {
+												if (!window.confirm("교환 일정을 취소하시겠습니까? 상대방에게 알림이 전달됩니다."))
+													return;
+												try {
+													await cancelScheduledExchange(
+														exchange.id,
+														exchange.requester_book.id,
+														exchange.owner_book.id,
+													);
+													router.refresh();
+													router.push("/");
+												} catch (err) {
+													alert(err instanceof Error ? err.message : "취소 실패");
+												}
+											}}
+											disabled={isCompleting}
+											className="w-full rounded-xl border border-primary/20 bg-transparent py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-primary/5 hover:text-foreground disabled:opacity-50"
+										>
+											일정 취소하기
+										</button>
 									</div>
 								);
 							})()}
@@ -1020,9 +1053,17 @@ export default function ExchangeInteractiveUI({
 				<NoShowModal
 					isOpen={showNoShowModal}
 					onClose={() => setShowNoShowModal(false)}
-					onSendReminder={() => {
-						alert("상대방에게 알림을 보냈습니다.");
-						setShowNoShowModal(false);
+					onSendReminder={async () => {
+						setIsSendingReminder(true);
+						try {
+							await sendManualReminder(exchange.id);
+							alert("상대방에게 알림을 보냈습니다.");
+							setShowNoShowModal(false);
+						} catch (err) {
+							alert(err instanceof Error ? err.message : "알림 전송 실패");
+						} finally {
+							setIsSendingReminder(false);
+						}
 					}}
 					onCancelExchange={async () => {
 						setIsReportingNoShow(true);
@@ -1041,6 +1082,7 @@ export default function ExchangeInteractiveUI({
 						}
 					}}
 					isReporting={isReportingNoShow}
+					isSendingReminder={isSendingReminder}
 				/>
 			)}
 		</>
