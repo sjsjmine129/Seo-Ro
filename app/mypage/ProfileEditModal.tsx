@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { X, Loader2 } from "lucide-react";
+import { X } from "lucide-react";
+import AnimatedLogo from "@/components/AnimatedLogo";
 import { updateUserProfile } from "./actions";
 
 type Props = {
@@ -154,7 +155,9 @@ export default function ProfileEditModal({
 							className="flex-1 rounded-xl bg-primary py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
 						>
 							{isSubmitting ? (
-								<Loader2 className="mx-auto h-5 w-5 animate-spin" />
+								<span className="flex items-center justify-center">
+									<AnimatedLogo className="h-10 w-10" />
+								</span>
 							) : (
 								"저장"
 							)}

@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { X, BookOpen, Library, ChevronRight } from "lucide-react";
 import { requestExchange, getUserAvailableBooksInLibrary } from "@/app/actions/exchange";
+import InlineLoadingLogo from "@/components/InlineLoadingLogo";
+import AnimatedLogo from "@/components/AnimatedLogo";
 
 export type LibraryItem = {
 	id: string;
@@ -177,10 +179,10 @@ export default function SelectMyBookModal({
 					{step === "book" && (
 						<>
 							{isLoadingBooks ? (
-								<div className="flex flex-col items-center justify-center gap-4 py-12">
-									<div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-									<p className="text-sm text-muted-foreground">내 책 불러오는 중...</p>
-								</div>
+								<InlineLoadingLogo
+									className="h-16 w-16"
+									paddingClassName="py-12"
+								/>
 							) : myBooks.length === 0 ? (
 								<div className="flex flex-col items-center justify-center gap-4 py-12 text-center">
 									<Library
@@ -243,9 +245,13 @@ export default function SelectMyBookModal({
 								type="button"
 								onClick={handleConfirm}
 								disabled={isSubmitting}
-								className="w-full rounded-xl bg-primary py-4 text-base font-semibold text-white shadow-lg transition-all hover:opacity-90 disabled:opacity-60"
+								className="flex min-h-[3.5rem] w-full items-center justify-center rounded-xl bg-primary py-4 text-base font-semibold text-white shadow-lg transition-all hover:opacity-90 disabled:opacity-60"
 							>
-								{isSubmitting ? "신청 중..." : "이 책으로 교환 신청하기"}
+								{isSubmitting ? (
+									<AnimatedLogo className="h-14 w-14" />
+								) : (
+									"이 책으로 교환 신청하기"
+								)}
 							</button>
 						</div>
 					)}

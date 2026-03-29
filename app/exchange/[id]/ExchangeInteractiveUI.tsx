@@ -18,6 +18,7 @@ import {
 	reportNoShow,
 	sendManualReminder,
 } from "@/app/actions/exchange";
+import InlineLoadingLogo from "@/components/InlineLoadingLogo";
 
 const CONDITION_LABELS: Record<string, string> = {
 	S: "S급",
@@ -551,9 +552,10 @@ function RequestDifferentBookModal({
 				</div>
 				<div className="flex-1 overflow-y-auto p-4">
 					{loading ? (
-						<p className="py-8 text-center text-sm text-muted-foreground">
-							불러오는 중...
-						</p>
+						<InlineLoadingLogo
+							className="h-16 w-16"
+							paddingClassName="py-8"
+						/>
 					) : books.length === 0 ? (
 						<p className="py-8 text-center text-sm text-muted-foreground">
 							상대방이 이 도서관에 등록한 다른 교환 가능한 책이 없습니다.

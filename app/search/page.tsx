@@ -3,7 +3,8 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Library, MapPin, BookOpen, Loader2 } from "lucide-react";
+import { Library, MapPin, BookOpen } from "lucide-react";
+import InlineLoadingLogo from "@/components/InlineLoadingLogo";
 import BookCard from "@/components/BookCard";
 import { createClient } from "@/utils/supabase/client";
 import BottomNav from "@/components/BottomNav";
@@ -561,9 +562,10 @@ export default function SearchPage() {
 						))}
 						<div ref={loadMoreRef} className="h-4" />
 						{isLoading && (
-							<p className="py-2 text-center text-sm text-foreground/60">
-								더 불러오는 중...
-							</p>
+							<InlineLoadingLogo
+								className="h-12 w-12"
+								paddingClassName="py-4"
+							/>
 						)}
 						{!hasMore && libraryResults.length > 0 && (
 							<p className="py-2 text-center text-sm text-foreground/50">
@@ -594,12 +596,10 @@ export default function SearchPage() {
 							</li>
 						))}
 						{isLoading && (
-							<div className="flex items-center justify-center gap-2 py-4">
-								<Loader2 className="h-5 w-5 animate-spin text-primary" strokeWidth={2} />
-								<span className="text-sm text-foreground/60">
-									검색 중...
-								</span>
-							</div>
+							<InlineLoadingLogo
+								className="h-14 w-14"
+								paddingClassName="py-4"
+							/>
 						)}
 					</ul>
 				)}

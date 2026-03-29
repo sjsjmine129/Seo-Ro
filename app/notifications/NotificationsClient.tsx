@@ -12,6 +12,7 @@ import {
 import NotificationItem from "./NotificationItem";
 import PushPrompt from "./PushPrompt";
 import BottomNav from "@/components/BottomNav";
+import InlineLoadingLogo from "@/components/InlineLoadingLogo";
 
 export default function NotificationsClient() {
 	const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -77,10 +78,10 @@ export default function NotificationsClient() {
 				{/* List: padded content */}
 				<div className="w-full space-y-3 px-4 py-4">
 				{loading ? (
-					<div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-						<Bell className="mb-3 h-12 w-12 animate-pulse opacity-50" />
-						<p className="text-sm">알림을 불러오는 중...</p>
-					</div>
+					<InlineLoadingLogo
+						className="h-20 w-20"
+						paddingClassName="py-16"
+					/>
 				) : notifications.length === 0 ? (
 					<div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
 						<Bell className="mb-3 h-12 w-12 opacity-30" strokeWidth={1.5} />

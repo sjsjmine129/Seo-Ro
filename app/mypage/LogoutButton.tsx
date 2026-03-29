@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { LogOut, Loader2 } from "lucide-react";
+import { LogOut } from "lucide-react";
+import AnimatedLogo from "@/components/AnimatedLogo";
 import { createClient } from "@/utils/supabase/client";
 
 function LogoutConfirmModal({
@@ -42,7 +43,9 @@ function LogoutConfirmModal({
 							className="flex-1 rounded-xl bg-red-500 py-2.5 text-sm font-medium text-white transition-opacity hover:bg-red-600 disabled:opacity-50"
 						>
 							{isLoading ? (
-								<Loader2 className="mx-auto h-5 w-5 animate-spin" />
+								<span className="flex justify-center">
+									<AnimatedLogo className="h-9 w-9" />
+								</span>
 							) : (
 								"로그아웃"
 							)}
@@ -91,7 +94,7 @@ export default function LogoutButton({ variant = "default" }: Props) {
 					aria-label="로그아웃"
 				>
 					{isLoading ? (
-						<Loader2 className="h-4 w-4 animate-spin" strokeWidth={2} />
+						<AnimatedLogo className="h-8 w-8" />
 					) : (
 						<>
 							<LogOut className="h-4 w-4" strokeWidth={2} />
@@ -121,7 +124,9 @@ export default function LogoutButton({ variant = "default" }: Props) {
 					aria-label="로그아웃"
 				>
 					{isLoading ? (
-						<Loader2 className="mx-auto h-4 w-4 animate-spin" strokeWidth={2} />
+						<span className="flex justify-center">
+							<AnimatedLogo className="h-9 w-9" />
+						</span>
 					) : (
 						"로그아웃"
 					)}
@@ -146,7 +151,7 @@ export default function LogoutButton({ variant = "default" }: Props) {
 		>
 			{isLoading ? (
 				<>
-					<Loader2 className="h-4 w-4 animate-spin" strokeWidth={2} />
+					<AnimatedLogo className="h-8 w-8" />
 					로그아웃 중...
 				</>
 			) : (
