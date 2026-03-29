@@ -2,6 +2,7 @@ import { createClient } from "@/utils/supabase/server";
 import BottomNav from "@/components/BottomNav";
 import LibraryFilter from "@/components/LibraryFilter";
 import BookCard from "@/components/BookCard";
+import Logo from "@/components/Logo";
 import { Library } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -11,7 +12,8 @@ function getLibraryNameFromBook(book: { book_libraries?: unknown }): string {
 	if (!bl) return "도서관";
 	const arr = Array.isArray(bl) ? bl : [bl];
 	const first = arr.find(
-		(x: { libraries?: { name?: string }; library_id?: string }) => x.libraries,
+		(x: { libraries?: { name?: string }; library_id?: string }) =>
+			x.libraries,
 	);
 	if (!first?.libraries) return "도서관";
 	const name = (first.libraries as { name?: string }).name;
@@ -233,11 +235,17 @@ export default async function Home({
 					<div className="flex flex-col gap-3">
 						{books.map((book) => {
 							const bl = book.book_libraries;
-							const blArr = Array.isArray(bl) ? bl : bl ? [bl] : [];
+							const blArr = Array.isArray(bl)
+								? bl
+								: bl
+									? [bl]
+									: [];
 							const isInterested =
 								libraries.length > 0 &&
 								blArr.some((x: { library_id?: string }) =>
-									libraries.some((l) => l.id === x.library_id),
+									libraries.some(
+										(l) => l.id === x.library_id,
+									),
 								);
 
 							return (

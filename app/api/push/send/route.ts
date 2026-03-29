@@ -13,15 +13,15 @@ export async function POST(request: Request) {
 		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 	}
 
-	let body: { userId: string; title: string; body: string; url?: string };
+	let payload: { userId: string; title: string; body: string; url?: string };
 	try {
-		body = await request.json();
+		payload = await request.json();
 	} catch {
 		return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
 	}
 
-	const { userId, title, body, url } = body;
-	if (!userId || !title || !body) {
+	const { userId, title, body: messageBody, url } = payload;
+	if (!userId || !title || !messageBody) {
 		return NextResponse.json(
 			{ error: "Missing userId, title, or body" },
 			{ status: 400 },
@@ -31,7 +31,7 @@ export async function POST(request: Request) {
 	try {
 		const { sent, failed } = await sendPushToUser(userId, {
 			title,
-			body,
+			body: messageBody,
 			url: url ?? "/",
 		});
 		return NextResponse.json({ ok: true, sent, failed });

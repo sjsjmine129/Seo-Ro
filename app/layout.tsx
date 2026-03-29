@@ -3,6 +3,9 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { GoogleTagManager, GoogleAnalytics } from "@next/third-parties/google";
 import "./globals.css";
 
+// Favicon: after changing app/icon.png or app/apple-icon.png, restart the dev server
+// (`next dev`) and hard-refresh or clear the browser cache so the tab icon updates reliably.
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -18,8 +21,8 @@ export const metadata: Metadata = {
   description: "Location-based P2P book exchange at public libraries",
   manifest: "/manifest.json",
   icons: {
-    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
-    apple: [{ url: "/apple-icon.png", type: "image/png" }],
+    icon: "/icon.png",
+    apple: "/apple-icon.png",
   },
 };
 
