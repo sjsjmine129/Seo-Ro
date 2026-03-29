@@ -3,10 +3,9 @@
 import { motion } from "framer-motion";
 
 /**
- * Animated stacked-books logo using PNG slices from `public/1.png` … `public/8.png`.
- *
- * Prerequisites: place `1.png` (top / pink) through `8.png` (bottom / brown) in
- * `public/`. Use on the login page or any client view: `<AnimatedLogo className="..." />`.
+ * Stacked-books logo: `public/1.png` (top) … `public/8.png` (bottom). Each file is
+ * the same canvas size with the book placed in-frame; layers are stacked with
+ * `absolute inset-0` so transparency lines up. Use: `<AnimatedLogo className="..." />`.
  */
 
 const SPRING = {
@@ -15,7 +14,6 @@ const SPRING = {
 	damping: 15,
 };
 
-/** Top → bottom: index 0 = `/1.png`, index 7 = `/8.png`. */
 const BOOK_IMAGES = [
 	"/1.png",
 	"/2.png",
@@ -27,8 +25,6 @@ const BOOK_IMAGES = [
 	"/8.png",
 ] as const;
 
-const BOOK_COUNT = BOOK_IMAGES.length;
-
 type AnimatedLogoProps = {
 	className?: string;
 };
@@ -36,33 +32,29 @@ type AnimatedLogoProps = {
 export default function AnimatedLogo({ className }: AnimatedLogoProps) {
 	return (
 		<div
-			className={`relative mx-auto aspect-square w-full max-w-[7.5rem] overflow-visible md:max-w-[8.5rem] ${className ?? ""}`}
+			className={`relative mx-auto aspect-square w-32 max-w-full overflow-visible ${className ?? ""}`}
 			aria-hidden
 		>
-			<div className="absolute inset-x-0 bottom-0 top-0 flex flex-col items-center justify-end overflow-visible pb-0.5">
-				{BOOK_IMAGES.map((src, index) => {
-					const staggerDelay = (BOOK_COUNT - 1 - index) * 0.1;
-					/* Top book in front of lower layers */
-					const zIndex = BOOK_COUNT - index;
+			{BOOK_IMAGES.map((src, index) => {
+				/* Top book first (`1.png` → delay 0), bottom last (`8.png` → 0.7s). */
+				const delay = index * 0.1;
 
-					return (
-						<motion.img
-							key={src}
-							src={src}
-							alt=""
-							draggable={false}
-							className="relative mb-[-6px] h-auto w-full max-w-[min(100%,11rem)] shrink-0 object-contain object-bottom select-none last:mb-0"
-							style={{ zIndex }}
-							initial={{ y: -80, opacity: 0 }}
-							animate={{ y: 0, opacity: 1 }}
-							transition={{
-								...SPRING,
-								delay: staggerDelay,
-							}}
-						/>
-					);
-				})}
-			</div>
+				return (
+					<motion.img
+						key={src}
+						src={src}
+						alt=""
+						draggable={false}
+						className="pointer-events-none absolute inset-0 h-full w-full select-none object-contain"
+						initial={{ y: -80, opacity: 0 }}
+						animate={{ y: 0, opacity: 1 }}
+						transition={{
+							...SPRING,
+							delay,
+						}}
+					/>
+				);
+			})}
 		</div>
 	);
 }
