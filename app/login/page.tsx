@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Logo from "@/components/Logo";
+import AnimatedLogo from "@/components/AnimatedLogo";
 import { login, signup } from "./actions";
 
 export default function LoginPage() {
@@ -27,10 +27,7 @@ export default function LoginPage() {
 			<div className="w-full max-w-sm">
 				{/* Logo & Slogan */}
 				<div className="mb-10 flex flex-col items-center text-center">
-					<Logo
-						className="mx-auto mb-6 h-28 w-28 shrink-0 md:h-32 md:w-32"
-						priority
-					/>
+					<AnimatedLogo className="mx-auto mb-6 h-28 w-28 shrink-0 md:h-32 md:w-32" />
 					<h1 className="text-xl font-bold leading-snug text-primary md:text-2xl">
 						우리 동네 책 교환 커뮤니티, 서로
 					</h1>
