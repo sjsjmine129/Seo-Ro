@@ -1027,6 +1027,18 @@ export default function ExchangeInteractiveUI({
 						</p>
 					</section>
 				)}
+
+				{/* Contact Support - bottom */}
+				<section className="pt-6 text-center">
+					<Link
+						href="https://forms.gle/YsQ7RjttpZC2vVMw6"
+						target="_blank"
+						rel="noopener noreferrer"
+						className="text-sm text-muted-foreground underline underline-offset-2 transition-colors hover:text-foreground"
+					>
+						서비스 이용에 문제가 있으신가요? 고객센터 문의하기
+					</Link>
+				</section>
 			</main>
 
 			{showTimeModal && (

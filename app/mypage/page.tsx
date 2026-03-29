@@ -5,7 +5,9 @@ import Link from "next/link";
 import BottomNav from "@/components/BottomNav";
 import LogoutButton from "@/app/mypage/LogoutButton";
 import ProfileSection from "@/app/mypage/ProfileSection";
-import { BookOpen, ArrowRight } from "lucide-react";
+import { BookOpen, ArrowRight, HelpCircle } from "lucide-react";
+
+const INQUIRY_FORM_URL = "https://forms.gle/YsQ7RjttpZC2vVMw6";
 
 const ONGOING_STATUSES = [
 	"REQUESTED",
@@ -291,9 +293,34 @@ export default async function MyPage() {
 						</div>
 					</section>
 
-					{/* Logout - footer */}
-					<div className="w-full pt-4">
+					{/* Inquiry & Logout - footer */}
+					<div className="flex w-full flex-col gap-3 pt-4">
+						<Link
+							href={INQUIRY_FORM_URL}
+							target="_blank"
+							rel="noopener noreferrer"
+							className="flex w-full items-center justify-center gap-2 rounded-xl border border-primary/20 bg-white/40 py-3 font-medium text-muted-foreground shadow-sm transition-colors hover:bg-white/60 hover:text-foreground"
+						>
+							<HelpCircle className="h-4 w-4" strokeWidth={2} />
+							문의하기
+						</Link>
 						<LogoutButton variant="footer" />
+					</div>
+
+					{/* Legal links */}
+					<div className="mt-8 flex justify-center gap-4 text-xs text-neutral-400">
+						<Link
+							href="/terms"
+							className="transition-colors hover:text-foreground"
+						>
+							이용약관
+						</Link>
+						<Link
+							href="/privacy"
+							className="transition-colors hover:text-foreground"
+						>
+							개인정보처리방침
+						</Link>
 					</div>
 				</main>
 			</div>
