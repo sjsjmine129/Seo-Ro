@@ -234,7 +234,7 @@ export default function SearchPage() {
 
 				if (error) throw error;
 
-				const books = (booksData ?? []) as BookItem[];
+				const books = (booksData ?? []) as unknown as BookItem[];
 				const available: BookResult[] = [];
 				const availableOther: BookResult[] = [];
 				const fallback: BookResult[] = [];

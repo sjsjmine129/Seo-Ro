@@ -3,16 +3,30 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Search, BookPlus, Bell, User } from "lucide-react";
+import {
+	Home,
+	Search,
+	BookPlus,
+	Bell,
+	User,
+	type LucideIcon,
+} from "lucide-react";
 import { getUnreadCount } from "@/app/actions/notifications";
 
-const NAV_ITEMS = [
+type NavItem = {
+	href: string;
+	label: string;
+	icon: LucideIcon;
+	isFab?: boolean;
+};
+
+const NAV_ITEMS: NavItem[] = [
 	{ href: "/", label: "Home", icon: Home },
 	{ href: "/search", label: "Search", icon: Search },
 	{ href: "/shelve", label: "Shelve", icon: BookPlus, isFab: true },
 	{ href: "/notifications", label: "Notifications", icon: Bell },
 	{ href: "/mypage", label: "My Page", icon: User },
-] as const;
+];
 
 export default function BottomNav() {
 	const pathname = usePathname();
