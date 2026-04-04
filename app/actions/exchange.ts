@@ -1,7 +1,14 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { createClient, createServiceRoleClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
+import { insertNotification, insertNotificationsForUsers } from "@/app/actions/notifications";
+import {
+	sendExchangeCancellationEmails,
+	sendExchangeConfirmationEmails,
+} from "@/app/actions/sendEmail";
+import { formatMeetAtForEmail } from "@/lib/formatMeetAtForEmail";
 
 export async function requestExchange(
 	requesterBookId: string,
@@ -102,6 +109,15 @@ export async function requestExchange(
 		throw new Error(`교환 신청 실패: ${insertErr.message}`);
 	}
 
+	// 3. Notify owner of exchange request
+	await insertNotification(
+		ownerId,
+		"REQUEST",
+		"바꿔읽기 요청",
+		"누군가 당신의 책과 교환을 요청했습니다.",
+		`/exchange/${exchange!.id}`,
+	);
+
 	return { exchangeId: exchange!.id };
 }
 
@@ -109,19 +125,26 @@ async function revertBooksAndUpdateExchange(
 	supabase: Awaited<ReturnType<typeof createClient>>,
 	exchangeId: string,
 	newStatus: "CANCELED" | "REJECTED",
+	notifyUserId?: string,
 ) {
 	const { data: ex } = await supabase
 		.from("exchanges")
-		.select("requester_book_id, owner_book_id")
+		.select("requester_book_id, owner_book_id, requester_id, owner_id")
 		.eq("id", exchangeId)
 		.single();
 
 	if (!ex) throw new Error("교환 정보를 찾을 수 없습니다.");
 
-	await supabase
-		.from("books")
-		.update({ status: "AVAILABLE" })
-		.in("id", [ex.requester_book_id, ex.owner_book_id]);
+	// Use service role to update BOTH books (RLS prevents user from updating the other party's book)
+	const bookIds = [ex.requester_book_id, ex.owner_book_id].filter(Boolean);
+	if (bookIds.length > 0) {
+		const admin = createServiceRoleClient();
+		const { error: booksErr } = await admin
+			.from("books")
+			.update({ status: "AVAILABLE" })
+			.in("id", bookIds);
+		if (booksErr) throw new Error(`책 상태 복구 실패: ${booksErr.message}`);
+	}
 
 	const { error } = await supabase
 		.from("exchanges")
@@ -129,6 +152,20 @@ async function revertBooksAndUpdateExchange(
 		.eq("id", exchangeId);
 
 	if (error) throw new Error(`상태 업데이트 실패: ${error.message}`);
+
+	if (notifyUserId) {
+		const type = newStatus === "REJECTED" ? "REJECTED" : "CANCELED";
+		const title = newStatus === "REJECTED" ? "교환 거절됨" : "교환 취소됨";
+		const message =
+			newStatus === "REJECTED"
+				? "교환 요청이 거절되었습니다."
+				: "교환이 취소되었습니다.";
+		await insertNotification(notifyUserId, type, title, message, `/exchange/${exchangeId}`);
+	}
+
+	revalidatePath("/");
+	revalidatePath("/mypage");
+	revalidatePath(`/exchange/${exchangeId}`);
 }
 
 export async function cancelExchange(exchangeId: string) {
@@ -151,7 +188,18 @@ export async function cancelExchange(exchangeId: string) {
 		throw new Error("이미 처리된 교환입니다.");
 	}
 
-	await revertBooksAndUpdateExchange(supabase, exchangeId, "CANCELED");
+	// Notify owner of cancellation
+	const { data: exFull } = await supabase
+		.from("exchanges")
+		.select("owner_id")
+		.eq("id", exchangeId)
+		.single();
+	await revertBooksAndUpdateExchange(
+		supabase,
+		exchangeId,
+		"CANCELED",
+		exFull?.owner_id,
+	);
 }
 
 export async function rejectExchange(exchangeId: string) {
@@ -174,7 +222,18 @@ export async function rejectExchange(exchangeId: string) {
 		throw new Error("이미 처리된 교환입니다.");
 	}
 
-	await revertBooksAndUpdateExchange(supabase, exchangeId, "REJECTED");
+	// Notify requester of rejection
+	const { data: exFull } = await supabase
+		.from("exchanges")
+		.select("requester_id")
+		.eq("id", exchangeId)
+		.single();
+	await revertBooksAndUpdateExchange(
+		supabase,
+		exchangeId,
+		"REJECTED",
+		exFull?.requester_id,
+	);
 }
 
 export async function confirmExchangeTime(
@@ -216,6 +275,78 @@ export async function confirmExchangeTime(
 		.eq("id", exchangeId);
 
 	if (error) throw new Error(`약속 확정 실패: ${error.message}`);
+
+	// Notify owner that time was selected (scheduled)
+	const { data: exOwner } = await supabase
+		.from("exchanges")
+		.select("owner_id")
+		.eq("id", exchangeId)
+		.single();
+	if (exOwner?.owner_id) {
+		await insertNotification(
+			exOwner.owner_id,
+			"SCHEDULED",
+			"교환 일정 확정",
+			"상대방이 약속 시간을 선택했습니다. 확인해 주세요.",
+			`/exchange/${exchangeId}`,
+		);
+	}
+
+	try {
+		const { data: exRow } = await supabase
+			.from("exchanges")
+			.select(
+				"meet_at, requester_id, owner_id, requester_book_id, owner_book_id, library_id",
+			)
+			.eq("id", exchangeId)
+			.single();
+
+		if (exRow?.meet_at) {
+			const [reqUser, ownUser, reqBook, ownBook, lib] = await Promise.all([
+				supabase
+					.from("users")
+					.select("email, nickname")
+					.eq("id", exRow.requester_id)
+					.single(),
+				supabase
+					.from("users")
+					.select("email, nickname")
+					.eq("id", exRow.owner_id)
+					.single(),
+				supabase
+					.from("books")
+					.select("title")
+					.eq("id", exRow.requester_book_id)
+					.single(),
+				supabase
+					.from("books")
+					.select("title")
+					.eq("id", exRow.owner_book_id)
+					.single(),
+				supabase
+					.from("libraries")
+					.select("name")
+					.eq("id", exRow.library_id)
+					.single(),
+			]);
+
+			await sendExchangeConfirmationEmails({
+				requesterEmail: reqUser.data?.email ?? null,
+				ownerEmail: ownUser.data?.email ?? null,
+				requesterNickname: reqUser.data?.nickname ?? "사용자",
+				ownerNickname: ownUser.data?.nickname ?? "사용자",
+				ownerBookTitle: ownBook.data?.title ?? "(제목 없음)",
+				requesterBookTitle: reqBook.data?.title ?? "(제목 없음)",
+				appointmentTimeFormatted: formatMeetAtForEmail(exRow.meet_at),
+				libraryName: lib.data?.name ?? "도서관",
+			});
+		}
+	} catch (e) {
+		console.error(
+			"[confirmExchangeTime] Exchange confirmation email failed:",
+			e,
+		);
+	}
 }
 
 function normalizeTimeForCompare(t: string): string {
@@ -248,7 +379,18 @@ export async function cancelExchangeNoMatchingTime(exchangeId: string) {
 		throw new Error("이미 처리된 교환입니다.");
 	}
 
-	await revertBooksAndUpdateExchange(supabase, exchangeId, "CANCELED");
+	// Notify owner of cancellation (no matching time)
+	const { data: exFull } = await supabase
+		.from("exchanges")
+		.select("owner_id")
+		.eq("id", exchangeId)
+		.single();
+	await revertBooksAndUpdateExchange(
+		supabase,
+		exchangeId,
+		"CANCELED",
+		exFull?.owner_id,
+	);
 }
 
 export async function proposeTimes(
@@ -286,6 +428,22 @@ export async function proposeTimes(
 		.eq("id", exchangeId);
 
 	if (error) throw new Error(`시간 제안 실패: ${error.message}`);
+
+	// Notify requester that owner accepted and proposed times
+	const { data: exReq } = await supabase
+		.from("exchanges")
+		.select("requester_id")
+		.eq("id", exchangeId)
+		.single();
+	if (exReq?.requester_id) {
+		await insertNotification(
+			exReq.requester_id,
+			"ACCEPTED",
+			"교환 수락됨",
+			"상대방이 교환을 수락하고 약속 시간을 제안했습니다. 시간을 선택해 주세요.",
+			`/exchange/${exchangeId}`,
+		);
+	}
 }
 
 export async function counterRequestExchange(
@@ -382,6 +540,15 @@ export async function counterRequestExchange(
 			.eq("id", currentRequesterBookId);
 		throw new Error(`교환 업데이트 실패: ${err3.message}`);
 	}
+
+	// Notify requester of counter-request (owner asked for different book)
+	await insertNotification(
+		ex.requester_id,
+		"COUNTER",
+		"다른 책 요청",
+		"상대방이 다른 책으로 교환을 요청했습니다. 수락하거나 거절해 주세요.",
+		`/exchange/${exchangeId}`,
+	);
 }
 export async function respondToCounterRequest(
 	exchangeId: string,
@@ -415,11 +582,37 @@ export async function respondToCounterRequest(
 			.eq("id", exchangeId);
 
 		if (error) throw new Error(`상태 업데이트 실패: ${error.message}`);
+
+		// Notify owner that requester accepted their counter-request
+		const { data: exOwner } = await supabase
+			.from("exchanges")
+			.select("owner_id")
+			.eq("id", exchangeId)
+			.single();
+		if (exOwner?.owner_id) {
+			await insertNotification(
+				exOwner.owner_id,
+				"ACCEPTED",
+				"다른 책 제안 수락됨",
+				"상대방이 다른 책으로의 교환을 수락했습니다. 이제 시간을 제안해 주세요.",
+				`/exchange/${exchangeId}`,
+			);
+		}
 	} else {
-		await supabase
+		// Requester rejected counter - notify owner
+		const { data: exOwner } = await supabase
+			.from("exchanges")
+			.select("owner_id")
+			.eq("id", exchangeId)
+			.single();
+
+		// Use service role to update BOTH books (RLS prevents user from updating the other party's book)
+		const admin = createServiceRoleClient();
+		const { error: booksErr } = await admin
 			.from("books")
 			.update({ status: "AVAILABLE" })
 			.in("id", [requesterBookId, ownerBookId]);
+		if (booksErr) throw new Error(`책 상태 복구 실패: ${booksErr.message}`);
 
 		const { error } = await supabase
 			.from("exchanges")
@@ -427,6 +620,20 @@ export async function respondToCounterRequest(
 			.eq("id", exchangeId);
 
 		if (error) throw new Error(`상태 업데이트 실패: ${error.message}`);
+
+		if (exOwner?.owner_id) {
+			await insertNotification(
+				exOwner.owner_id,
+				"CANCELED",
+				"교환 취소됨",
+				"상대방이 다른 책 제안을 거절하여 교환이 취소되었습니다.",
+				`/exchange/${exchangeId}`,
+			);
+		}
+
+		revalidatePath("/");
+		revalidatePath("/mypage");
+		revalidatePath(`/exchange/${exchangeId}`);
 	}
 }
 
@@ -468,6 +675,16 @@ export async function markExchangeCompleted(
 
 	if (updateErr) throw new Error(`확인 실패: ${updateErr.message}`);
 
+	// Notify the other user that one party completed (HALF_COMPLETED)
+	const otherUserId = role === "requester" ? ex.owner_id : ex.requester_id;
+	await insertNotification(
+		otherUserId,
+		"HALF_COMPLETED",
+		"교환 진행 상황",
+		"상대방이 교환 완료를 확인했습니다. 만남이 끝났다면 완료 버튼을 눌러 주세요.",
+		`/exchange/${exchangeId}`,
+	);
+
 	const { data: updated } = await supabase
 		.from("exchanges")
 		.select("requester_completed, owner_completed")
@@ -496,7 +713,144 @@ export async function markExchangeCompleted(
 			user_ids: [ex.requester_id, ex.owner_id],
 			delta: 2,
 		});
+
+		// Notify both users of full completion
+		await insertNotificationsForUsers(
+			[ex.requester_id, ex.owner_id],
+			"FULLY_COMPLETED",
+			"교환 완료!",
+			"바꿔읽기 교환이 완료되었습니다. 책장 점수 +2가 적립되었어요.",
+			`/exchange/${exchangeId}`,
+		);
 	}
+}
+
+/** Send manual reminder to the other party (e.g. "I'm waiting at the library") */
+export async function sendManualReminder(exchangeId: string) {
+	const supabase = await createClient();
+	const {
+		data: { user },
+	} = await supabase.auth.getUser();
+	if (!user) redirect("/login");
+
+	const { data: ex } = await supabase
+		.from("exchanges")
+		.select("requester_id, owner_id, status")
+		.eq("id", exchangeId)
+		.single();
+
+	if (!ex) throw new Error("교환 정보를 찾을 수 없습니다.");
+	if (ex.status !== "SCHEDULED") {
+		throw new Error("확정된 약속만 알림을 보낼 수 있습니다.");
+	}
+	if (ex.requester_id !== user.id && ex.owner_id !== user.id) {
+		throw new Error("권한이 없습니다.");
+	}
+
+	const otherUserId = ex.requester_id === user.id ? ex.owner_id : ex.requester_id;
+	await insertNotification(
+		otherUserId,
+		"SYSTEM",
+		"상대방이 기다리고 있어요",
+		"상대방이 교환 장소에서 기다리고 있어요!",
+		`/exchange/${exchangeId}`,
+	);
+}
+
+/** Cancel a SCHEDULED exchange (both requester and owner can cancel). Notifies the other party. */
+export async function cancelScheduledExchange(
+	exchangeId: string,
+	requesterBookId: string,
+	ownerBookId: string,
+) {
+	const supabase = await createClient();
+	const {
+		data: { user },
+	} = await supabase.auth.getUser();
+	if (!user) redirect("/login");
+
+	const { data: ex } = await supabase
+		.from("exchanges")
+		.select("requester_id, owner_id, status")
+		.eq("id", exchangeId)
+		.single();
+
+	if (!ex) throw new Error("교환 정보를 찾을 수 없습니다.");
+	if (ex.status !== "SCHEDULED") {
+		throw new Error("확정된 약속만 취소할 수 있습니다.");
+	}
+	if (ex.requester_id !== user.id && ex.owner_id !== user.id) {
+		throw new Error("권한이 없습니다.");
+	}
+
+	const otherUserId = ex.requester_id === user.id ? ex.owner_id : ex.requester_id;
+
+	// Use service role to update BOTH books (RLS prevents user from updating the other party's book)
+	const admin = createServiceRoleClient();
+	const { error: booksErr } = await admin
+		.from("books")
+		.update({ status: "AVAILABLE" })
+		.in("id", [requesterBookId, ownerBookId]);
+	if (booksErr) throw new Error(`책 상태 복구 실패: ${booksErr.message}`);
+
+	const { error } = await supabase
+		.from("exchanges")
+		.update({ status: "CANCELED" })
+		.eq("id", exchangeId);
+
+	if (error) throw new Error(`취소 실패: ${error.message}`);
+
+	await insertNotification(
+		otherUserId,
+		"CANCELED",
+		"교환 취소됨",
+		"상대방이 교환 일정을 취소했습니다.",
+		`/exchange/${exchangeId}`,
+	);
+
+	try {
+		const [reqUser, ownUser, reqBook, ownBook] = await Promise.all([
+			supabase
+				.from("users")
+				.select("email, nickname")
+				.eq("id", ex.requester_id)
+				.single(),
+			supabase
+				.from("users")
+				.select("email, nickname")
+				.eq("id", ex.owner_id)
+				.single(),
+			supabase
+				.from("books")
+				.select("title")
+				.eq("id", requesterBookId)
+				.single(),
+			supabase
+				.from("books")
+				.select("title")
+				.eq("id", ownerBookId)
+				.single(),
+		]);
+
+		await sendExchangeCancellationEmails({
+			requesterEmail: reqUser.data?.email ?? null,
+			ownerEmail: ownUser.data?.email ?? null,
+			requesterNickname: reqUser.data?.nickname ?? "사용자",
+			ownerNickname: ownUser.data?.nickname ?? "사용자",
+			ownerBookTitle: ownBook.data?.title ?? "(제목 없음)",
+			requesterBookTitle: reqBook.data?.title ?? "(제목 없음)",
+			cancelReason: null,
+		});
+	} catch (e) {
+		console.error(
+			"[cancelScheduledExchange] Cancellation email failed:",
+			e,
+		);
+	}
+
+	revalidatePath("/");
+	revalidatePath("/mypage");
+	revalidatePath(`/exchange/${exchangeId}`);
 }
 
 export async function reportNoShow(
@@ -524,10 +878,16 @@ export async function reportNoShow(
 		throw new Error("권한이 없습니다.");
 	}
 
-	await supabase
+	// Notify the other user of no-show
+	const otherUserId = ex.requester_id === user.id ? ex.owner_id : ex.requester_id;
+
+	// Use service role to update BOTH books (RLS prevents user from updating the other party's book)
+	const admin = createServiceRoleClient();
+	const { error: booksErr } = await admin
 		.from("books")
 		.update({ status: "AVAILABLE" })
 		.in("id", [requesterBookId, ownerBookId]);
+	if (booksErr) throw new Error(`책 상태 복구 실패: ${booksErr.message}`);
 
 	const { error } = await supabase
 		.from("exchanges")
@@ -535,6 +895,56 @@ export async function reportNoShow(
 		.eq("id", exchangeId);
 
 	if (error) throw new Error(`취소 실패: ${error.message}`);
+
+	await insertNotification(
+		otherUserId,
+		"NO_SHOW",
+		"노쇼 신고됨",
+		"상대방이 약속 장소에 오지 않았다고 신고했습니다. 확인해 주세요.",
+		`/exchange/${exchangeId}`,
+	);
+
+	try {
+		const [reqUser, ownUser, reqBook, ownBook] = await Promise.all([
+			supabase
+				.from("users")
+				.select("email, nickname")
+				.eq("id", ex.requester_id)
+				.single(),
+			supabase
+				.from("users")
+				.select("email, nickname")
+				.eq("id", ex.owner_id)
+				.single(),
+			supabase
+				.from("books")
+				.select("title")
+				.eq("id", requesterBookId)
+				.single(),
+			supabase
+				.from("books")
+				.select("title")
+				.eq("id", ownerBookId)
+				.single(),
+		]);
+
+		await sendExchangeCancellationEmails({
+			requesterEmail: reqUser.data?.email ?? null,
+			ownerEmail: ownUser.data?.email ?? null,
+			requesterNickname: reqUser.data?.nickname ?? "사용자",
+			ownerNickname: ownUser.data?.nickname ?? "사용자",
+			ownerBookTitle: ownBook.data?.title ?? "(제목 없음)",
+			requesterBookTitle: reqBook.data?.title ?? "(제목 없음)",
+			cancelReason:
+				"노쇼 신고로 인해 교환이 취소되었습니다. 내용을 확인해 주세요.",
+		});
+	} catch (e) {
+		console.error("[reportNoShow] Cancellation email failed:", e);
+	}
+
+	revalidatePath("/");
+	revalidatePath("/mypage");
+	revalidatePath(`/exchange/${exchangeId}`);
 }
 
 export async function getRequesterAvailableBooksInLibrary(

@@ -5,7 +5,9 @@ import Link from "next/link";
 import BottomNav from "@/components/BottomNav";
 import LogoutButton from "@/app/mypage/LogoutButton";
 import ProfileSection from "@/app/mypage/ProfileSection";
-import { BookOpen, ArrowRight } from "lucide-react";
+import { BookOpen, ArrowRight, HelpCircle } from "lucide-react";
+
+const INQUIRY_FORM_URL = "https://forms.gle/YsQ7RjttpZC2vVMw6";
 
 const ONGOING_STATUSES = [
 	"REQUESTED",
@@ -179,7 +181,7 @@ export default async function MyPage() {
 						</h2>
 						<div className="flex snap-x gap-4 overflow-x-auto pb-4 scroll-smooth [-webkit-overflow-scrolling:touch]">
 							{exchanges.length === 0 ? (
-								<div className="flex min-w-full flex-col items-center justify-center rounded-2xl border border-white/40 bg-white/60 py-12 backdrop-blur-md">
+								<div className="flex min-w-full flex-col items-center justify-center rounded-2xl border border-primary/20 bg-white/60 py-12 backdrop-blur-md">
 									<BookOpen className="mb-2 h-10 w-10 text-muted-foreground/60" strokeWidth={1.5} />
 									<p className="text-center text-sm text-muted-foreground">
 										아직 진행 중인 교환이 없어요. 원하는 책을 찾아보세요!
@@ -197,7 +199,7 @@ export default async function MyPage() {
 										<Link
 											key={ex.id}
 											href={`/exchange/${ex.id}`}
-											className={`flex w-56 min-w-56 snap-center flex-shrink-0 flex-col overflow-hidden rounded-2xl border border-white/40 p-4 shadow-sm backdrop-blur-md transition-opacity hover:opacity-90 ${
+											className={`flex w-56 min-w-56 snap-center flex-shrink-0 flex-col overflow-hidden rounded-2xl border border-primary/20 p-4 shadow-sm backdrop-blur-md transition-opacity hover:opacity-90 ${
 												isEnded ? "bg-neutral-100/80 opacity-60 grayscale-[50%]" : "bg-white/60"
 											}`}
 										>
@@ -250,7 +252,7 @@ export default async function MyPage() {
 						</h2>
 						<div className="flex snap-x gap-4 overflow-x-auto pb-4 scroll-smooth [-webkit-overflow-scrolling:touch]">
 							{books.length === 0 ? (
-								<div className="flex min-w-full flex-col items-center justify-center rounded-2xl border border-white/40 bg-white/60 py-12 backdrop-blur-md">
+								<div className="flex min-w-full flex-col items-center justify-center rounded-2xl border border-primary/20 bg-white/60 py-12 backdrop-blur-md">
 									<BookOpen className="mb-2 h-10 w-10 text-muted-foreground/60" strokeWidth={1.5} />
 									<p className="mb-3 text-center text-sm text-muted-foreground">
 										아직 등록한 책이 없어요. 첫 책을 꽂아보세요!
@@ -267,7 +269,7 @@ export default async function MyPage() {
 									<Link
 										key={book.id}
 										href={`/book/${book.id}`}
-										className="flex w-28 min-w-28 snap-center flex-shrink-0 flex-col overflow-hidden rounded-xl border border-white/40 bg-white/60 shadow-sm backdrop-blur-md transition-opacity hover:opacity-90"
+										className="flex w-28 min-w-28 snap-center flex-shrink-0 flex-col overflow-hidden rounded-xl border border-primary/20 bg-white/60 shadow-sm backdrop-blur-md transition-opacity hover:opacity-90"
 									>
 										<div className="aspect-[2/3] w-full overflow-hidden rounded-t-xl bg-neutral-200">
 											{book.thumbnail_url ? (
@@ -291,9 +293,34 @@ export default async function MyPage() {
 						</div>
 					</section>
 
-					{/* Logout - footer */}
-					<div className="w-full pt-4">
+					{/* Inquiry & Logout - footer */}
+					<div className="flex w-full flex-col gap-3 pt-4">
+						<Link
+							href={INQUIRY_FORM_URL}
+							target="_blank"
+							rel="noopener noreferrer"
+							className="flex w-full items-center justify-center gap-2 rounded-xl border border-primary/20 bg-white/40 py-3 font-medium text-muted-foreground shadow-sm transition-colors hover:bg-white/60 hover:text-foreground"
+						>
+							<HelpCircle className="h-4 w-4" strokeWidth={2} />
+							문의하기
+						</Link>
 						<LogoutButton variant="footer" />
+					</div>
+
+					{/* Legal links */}
+					<div className="mt-8 flex justify-center gap-4 text-xs text-neutral-400">
+						<Link
+							href="/terms"
+							className="transition-colors hover:text-foreground"
+						>
+							이용약관
+						</Link>
+						<Link
+							href="/privacy"
+							className="transition-colors hover:text-foreground"
+						>
+							개인정보처리방침
+						</Link>
 					</div>
 				</main>
 			</div>

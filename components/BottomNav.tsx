@@ -1,32 +1,34 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, Search, BookPlus, Bell, User } from "lucide-react";
+import { getUnreadCount } from "@/app/actions/notifications";
 
 const NAV_ITEMS = [
 	{ href: "/", label: "Home", icon: Home },
 	{ href: "/search", label: "Search", icon: Search },
 	{ href: "/shelve", label: "Shelve", icon: BookPlus, isFab: true },
-	{
-		href: "/notifications",
-		label: "Notifications",
-		icon: Bell,
-		showDot: true,
-	},
+	{ href: "/notifications", label: "Notifications", icon: Bell },
 	{ href: "/mypage", label: "My Page", icon: User },
 ] as const;
 
 export default function BottomNav() {
 	const pathname = usePathname();
+	const [unreadCount, setUnreadCount] = useState(0);
+
+	useEffect(() => {
+		getUnreadCount().then(setUnreadCount);
+	}, [pathname]);
 
 	return (
 		<nav
 			className="fixed bottom-0 left-0 right-0 z-50 flex h-[65px] items-end justify-center pb-[env(safe-area-inset-bottom)]"
 			aria-label="Bottom navigation"
 		>
-			{/* Glassmorphism bar: bg-white/90 backdrop-blur-md border-white/40 */}
-			<div className="relative mx-auto flex h-16 rounded-t-2xl w-full max-w-lg items-center justify-around border-t border-white/40 bg-white/90 px-2 backdrop-blur-md">
+			{/* Glassmorphism bar: bg-glass-bg backdrop-blur-md border-primary/20 */}
+			<div className="relative mx-auto flex h-16 rounded-t-2xl w-full max-w-lg items-center justify-around border-t border-primary/20 bg-glass-bg px-2 backdrop-blur-md">
 				{NAV_ITEMS.map((item) => {
 					if (item.isFab) {
 						return (
@@ -65,11 +67,13 @@ export default function BottomNav() {
 									strokeWidth={2}
 									aria-hidden
 								/>
-								{item.showDot && (
+								{item.href === "/notifications" && unreadCount > 0 && (
 									<span
-										className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-accent"
-										aria-hidden
-									/>
+										className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold text-white"
+										aria-label={`${unreadCount} unread notifications`}
+									>
+										{unreadCount > 99 ? "99+" : unreadCount}
+									</span>
 								)}
 							</span>
 							<span className="text-[10px] font-medium">

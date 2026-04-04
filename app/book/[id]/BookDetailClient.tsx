@@ -88,7 +88,7 @@ export default function BookDetailClient({
 
 				<main className="flex flex-col px-6 pt-4">
 					{/* Image Carousel */}
-					<div className="overflow-hidden rounded-2xl border border-white/40 bg-white/60 shadow-sm">
+					<div className="overflow-hidden rounded-2xl border border-primary/20 bg-white/60 shadow-sm">
 						<BookImageCarousel
 							images={[
 								book.thumbnail_url,
@@ -131,7 +131,7 @@ export default function BookDetailClient({
 								</div>
 							</div>
 							{/* Right: Owner Profile - horizontal card */}
-							<div className="flex flex-shrink-0 items-center gap-3 rounded-2xl border border-white/40 bg-white/60 p-2.5 shadow-sm">
+							<div className="flex flex-shrink-0 items-center gap-3 rounded-2xl border border-primary/20 bg-white/60 p-2.5 shadow-sm">
 								{book.owner?.profile_image ? (
 									<img
 										src={book.owner.profile_image}
@@ -180,7 +180,7 @@ export default function BookDetailClient({
 					{/* User Review Section */}
 					{book.user_review && (
 						<section className="mt-4">
-							<blockquote className="flex items-center gap-3 rounded-xl border border-white/40 bg-white/70 px-4 py-4 backdrop-blur-md">
+							<blockquote className="flex items-center gap-3 rounded-xl border border-primary/20 bg-white/70 px-4 py-4 backdrop-blur-md">
 								<Quote
 									className="h-6 w-6 flex-shrink-0 text-primary/40"
 									strokeWidth={1.5}

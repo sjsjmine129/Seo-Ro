@@ -3,7 +3,8 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Library, MapPin, BookOpen, Loader2 } from "lucide-react";
+import { Library, MapPin, BookOpen } from "lucide-react";
+import InlineLoadingLogo from "@/components/InlineLoadingLogo";
 import BookCard from "@/components/BookCard";
 import { createClient } from "@/utils/supabase/client";
 import BottomNav from "@/components/BottomNav";
@@ -450,7 +451,7 @@ export default function SearchPage() {
 		<>
 			<div className="flex min-h-screen flex-col bg-background px-4 pb-32 pt-6">
 				{/* Toggle: 도서관 검색 | 책 검색 */}
-				<div className="mb-4 flex rounded-xl border border-white/40 bg-white/60 p-1 shadow-sm backdrop-blur-md">
+				<div className="mb-4 flex rounded-xl border border-primary/20 bg-white/60 p-1 shadow-sm backdrop-blur-md">
 					<button
 						type="button"
 						onClick={() => updateTab("library")}
@@ -536,7 +537,7 @@ export default function SearchPage() {
 							<li key={lib.id}>
 								<Link
 									href={`/library/${lib.id}`}
-									className="block rounded-2xl border border-white/40 bg-white/90 p-4 shadow-sm backdrop-blur-md transition-opacity hover:opacity-90"
+									className="block rounded-2xl border border-primary/20 bg-white/90 p-4 shadow-sm backdrop-blur-md transition-opacity hover:opacity-90"
 								>
 									<h3 className="font-semibold text-foreground">
 										{lib.name}
@@ -561,9 +562,10 @@ export default function SearchPage() {
 						))}
 						<div ref={loadMoreRef} className="h-4" />
 						{isLoading && (
-							<p className="py-2 text-center text-sm text-foreground/60">
-								더 불러오는 중...
-							</p>
+							<InlineLoadingLogo
+								className="h-12 w-12"
+								paddingClassName="py-4"
+							/>
 						)}
 						{!hasMore && libraryResults.length > 0 && (
 							<p className="py-2 text-center text-sm text-foreground/50">
@@ -594,12 +596,10 @@ export default function SearchPage() {
 							</li>
 						))}
 						{isLoading && (
-							<div className="flex items-center justify-center gap-2 py-4">
-								<Loader2 className="h-5 w-5 animate-spin text-primary" strokeWidth={2} />
-								<span className="text-sm text-foreground/60">
-									검색 중...
-								</span>
-							</div>
+							<InlineLoadingLogo
+								className="h-14 w-14"
+								paddingClassName="py-4"
+							/>
 						)}
 					</ul>
 				)}
@@ -613,7 +613,7 @@ export default function SearchPage() {
 							{[1, 2, 3].map((i) => (
 								<div
 									key={i}
-									className="flex gap-4 rounded-2xl border border-white/40 bg-white/60 p-4"
+									className="flex gap-4 rounded-2xl border border-primary/20 bg-white/60 p-4"
 								>
 									<div className="h-24 w-16 flex-shrink-0 animate-pulse rounded-md bg-neutral-200" />
 									<div className="flex-1 space-y-2">
@@ -632,13 +632,13 @@ export default function SearchPage() {
 						<button
 							type="button"
 							onMouseDown={handleLocationMouseDown}
-							className="mb-2 flex w-full max-w-lg items-center justify-center gap-2 rounded-xl border border-white/40 bg-white/90 px-4 py-3 text-sm font-medium text-primary shadow-md backdrop-blur-md"
+							className="mb-2 flex w-full max-w-lg items-center justify-center gap-2 rounded-xl border border-primary/20 bg-white/90 px-4 py-3 text-sm font-medium text-primary shadow-md backdrop-blur-md"
 						>
 							<MapPin className="h-4 w-4" />
 							현재 위치로 가까운 도서관 찾기
 						</button>
 					)}
-					<div className="flex w-full max-w-lg items-center gap-2 rounded-2xl border border-white/40 bg-white/90 px-4 py-3 shadow-md backdrop-blur-md">
+					<div className="flex w-full max-w-lg items-center gap-2 rounded-2xl border border-primary/20 bg-white/90 px-4 py-3 shadow-md backdrop-blur-md">
 						{isLibraryTab ? (
 							<Library className="h-5 w-5 flex-shrink-0 text-foreground/50" />
 						) : (

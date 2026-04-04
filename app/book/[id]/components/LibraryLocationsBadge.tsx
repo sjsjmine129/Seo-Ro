@@ -53,7 +53,7 @@ export default function LibraryLocationsBadge({
 			<button
 				type="button"
 				onClick={() => setOpen(true)}
-				className="flex shrink-0 items-center gap-1.5 rounded-full border border-white/40 bg-white/60 px-3 py-2 shadow-sm backdrop-blur-md transition-opacity hover:bg-white/80"
+				className="flex shrink-0 items-center gap-1.5 rounded-full border border-primary/20 bg-white/60 px-3 py-2 shadow-sm backdrop-blur-md transition-opacity hover:bg-white/80"
 			>
 				<MapPin
 					className="h-4 w-4 flex-shrink-0 text-primary"
@@ -71,9 +71,9 @@ export default function LibraryLocationsBadge({
 				>
 					<div
 						onClick={(e) => e.stopPropagation()}
-						className="flex w-full max-w-lg flex-col overflow-hidden rounded-t-2xl border border-white/40 bg-white/90 shadow-xl backdrop-blur-md"
+						className="flex w-full max-w-lg flex-col overflow-hidden rounded-t-2xl border border-primary/20 bg-white/90 shadow-xl backdrop-blur-md"
 					>
-						<div className="flex items-center justify-between border-b border-white/40 px-4 py-3">
+						<div className="flex items-center justify-between border-b border-primary/20 px-4 py-3">
 							<h3 className="text-base font-semibold text-foreground">
 								꽂혀 있는 도서관
 							</h3>

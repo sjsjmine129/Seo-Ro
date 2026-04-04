@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { X, Loader2 } from "lucide-react";
+import { X } from "lucide-react";
+import AnimatedLogo from "@/components/AnimatedLogo";
 import { updateUserProfile } from "./actions";
 
 type Props = {
@@ -69,9 +70,9 @@ export default function ProfileEditModal({
 		>
 			<div
 				onClick={(e) => e.stopPropagation()}
-				className="w-full max-w-sm overflow-hidden rounded-2xl border border-white/40 bg-white/90 shadow-xl backdrop-blur-md"
+				className="w-full max-w-sm overflow-hidden rounded-2xl border border-primary/20 bg-white/90 shadow-xl backdrop-blur-md"
 			>
-				<div className="flex items-center justify-between border-b border-white/40 px-4 py-3">
+				<div className="flex items-center justify-between border-b border-primary/20 px-4 py-3">
 					<h3 className="text-base font-semibold text-foreground">
 						프로필 수정
 					</h3>
@@ -154,7 +155,9 @@ export default function ProfileEditModal({
 							className="flex-1 rounded-xl bg-primary py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
 						>
 							{isSubmitting ? (
-								<Loader2 className="mx-auto h-5 w-5 animate-spin" />
+								<span className="flex items-center justify-center">
+									<AnimatedLogo className="h-10 w-10" />
+								</span>
 							) : (
 								"저장"
 							)}

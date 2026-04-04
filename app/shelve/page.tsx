@@ -412,7 +412,7 @@ export default function ShelvePage() {
 					}}
 				>
 					<BackButton />
-					<div className="flex items-center gap-2 text-sm rounded-full border border-white/40 bg-white/60 px-3 py-2 shadow-sm backdrop-blur-md transition-opacity hover:bg-white/80 font-medium text-foreground/70">
+					<div className="flex items-center gap-2 text-sm rounded-full border border-primary/20 bg-white/60 px-3 py-2 shadow-sm backdrop-blur-md transition-opacity hover:bg-white/80 font-medium text-foreground/70">
 						<span>Step {step} / 3</span>
 					</div>
 				</div>
@@ -429,7 +429,7 @@ export default function ShelvePage() {
 						<>
 							<div className="space-y-4">
 								<div className="flex gap-2">
-									<div className="flex flex-1 items-center gap-2 rounded-xl border border-white/40 bg-white/70 px-4 py-3 backdrop-blur-md">
+									<div className="flex flex-1 items-center gap-2 rounded-xl border border-primary/20 bg-white/70 px-4 py-3 backdrop-blur-md">
 										<Search className="h-5 w-5 flex-shrink-0 text-foreground/50" />
 										<input
 											type="search"
@@ -460,7 +460,7 @@ export default function ShelvePage() {
 										<button
 											type="button"
 											onClick={() => setShowBarcode(true)}
-											className="flex items-center gap-2 rounded-xl border border-white/40 bg-white/70 px-4 py-2.5 text-sm font-medium backdrop-blur-md transition-opacity hover:bg-white/90"
+											className="flex items-center gap-2 rounded-xl border border-primary/20 bg-white/70 px-4 py-2.5 text-sm font-medium backdrop-blur-md transition-opacity hover:bg-white/90"
 										>
 											<Camera className="h-4 w-4" />
 											바코드 스캔
@@ -469,7 +469,7 @@ export default function ShelvePage() {
 									<button
 										type="button"
 										onClick={() => setShowManualEntry(true)}
-										className="flex items-center gap-2 rounded-xl border border-white/40 bg-white/70 px-4 py-2.5 text-sm font-medium backdrop-blur-md transition-opacity hover:bg-white/90"
+										className="flex items-center gap-2 rounded-xl border border-primary/20 bg-white/70 px-4 py-2.5 text-sm font-medium backdrop-blur-md transition-opacity hover:bg-white/90"
 									>
 										<Edit3 className="h-4 w-4" />
 										직접 입력
@@ -478,7 +478,7 @@ export default function ShelvePage() {
 							</div>
 
 							{showManualEntry && (
-								<div className="rounded-2xl border border-white/40 bg-white/70 p-4 backdrop-blur-md">
+								<div className="rounded-2xl border border-primary/20 bg-white/70 p-4 backdrop-blur-md">
 									<h3 className="mb-3 text-sm font-semibold">
 										직접 입력
 									</h3>
@@ -490,7 +490,7 @@ export default function ShelvePage() {
 												setManualTitle(e.target.value)
 											}
 											placeholder="제목 (필수)"
-											className="w-full rounded-lg border border-white/40 bg-white/60 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+											className="w-full rounded-lg border border-primary/20 bg-white/60 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
 										/>
 										<input
 											type="text"
@@ -499,7 +499,7 @@ export default function ShelvePage() {
 												setManualAuthor(e.target.value)
 											}
 											placeholder="저자"
-											className="w-full rounded-lg border border-white/40 bg-white/60 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+											className="w-full rounded-lg border border-primary/20 bg-white/60 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
 										/>
 										<input
 											type="text"
@@ -510,7 +510,7 @@ export default function ShelvePage() {
 												)
 											}
 											placeholder="출판사"
-											className="w-full rounded-lg border border-white/40 bg-white/60 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+											className="w-full rounded-lg border border-primary/20 bg-white/60 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
 										/>
 									</div>
 									<div className="mt-3 flex gap-2">
@@ -544,7 +544,7 @@ export default function ShelvePage() {
 												onClick={() =>
 													handleSelectBook(item)
 												}
-												className="flex w-full gap-3 rounded-xl border border-white/40 bg-white/70 p-3 text-left backdrop-blur-md transition-opacity hover:bg-white/90"
+												className="flex w-full gap-3 rounded-xl border border-primary/20 bg-white/70 p-3 text-left backdrop-blur-md transition-opacity hover:bg-white/90"
 											>
 												{item.image ? (
 													<img
@@ -577,7 +577,7 @@ export default function ShelvePage() {
 					{/* Step 2: Photos, Condition, Review */}
 					{step === 2 && (
 						<>
-							<div className="rounded-2xl border border-white/40 bg-white/70 p-4 backdrop-blur-md">
+							<div className="rounded-2xl border border-primary/20 bg-white/70 p-4 backdrop-blur-md">
 								<div className="mb-2 flex items-center gap-2">
 									{form.book.thumbnail_url ? (
 										<img
@@ -616,7 +616,7 @@ export default function ShelvePage() {
 									{form.images.map((file, i) => (
 										<div
 											key={i}
-											className="relative aspect-[3/4] w-20 overflow-hidden rounded-xl border border-white/40 bg-white/60"
+											className="relative aspect-[3/4] w-20 overflow-hidden rounded-xl border border-primary/20 bg-white/60"
 										>
 											<img
 												src={URL.createObjectURL(file)}
@@ -679,7 +679,7 @@ export default function ShelvePage() {
 									>
 										<div
 											onClick={(e) => e.stopPropagation()}
-											className="absolute left-1/2 top-1/2 z-[61] w-72 max-w-[85vw] -translate-x-1/2 -translate-y-1/2 rounded-xl border border-white/40 bg-white/95 px-4 py-3 text-xs leading-relaxed text-foreground shadow-lg backdrop-blur-md"
+											className="absolute left-1/2 top-1/2 z-[61] w-72 max-w-[85vw] -translate-x-1/2 -translate-y-1/2 rounded-xl border border-primary/20 bg-white/95 px-4 py-3 text-xs leading-relaxed text-foreground shadow-lg backdrop-blur-md"
 										>
 											<div className="space-y-1">
 												{CONDITION_OPTIONS.map((opt) => (
@@ -717,7 +717,7 @@ export default function ShelvePage() {
 												className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
 													form.condition === opt.value
 														? "bg-primary text-white"
-														: "border border-white/40 bg-white/70 text-foreground backdrop-blur-md hover:bg-white/90"
+														: "border border-primary/20 bg-white/70 text-foreground backdrop-blur-md hover:bg-white/90"
 												}`}
 											>
 												{opt.label}
@@ -747,7 +747,7 @@ export default function ShelvePage() {
 									}
 									placeholder="이 책의 매력을 한 줄로 소개해 주세요"
 									rows={3}
-									className="w-full rounded-xl border border-white/40 bg-white/70 px-4 py-3 text-sm placeholder:text-foreground/50 backdrop-blur-md focus:outline-none focus:ring-2 focus:ring-primary/50"
+									className="w-full rounded-xl border border-primary/20 bg-white/70 px-4 py-3 text-sm placeholder:text-foreground/50 backdrop-blur-md focus:outline-none focus:ring-2 focus:ring-primary/50"
 								/>
 								<p className="mt-1 text-right text-xs text-foreground/60">
 									{form.userReview.length} / 100
@@ -785,7 +785,7 @@ export default function ShelvePage() {
 									{form.selectedLibraries.map((lib) => (
 										<span
 											key={lib.id}
-											className="flex items-center gap-1 rounded-full border border-white/40 bg-white/70 px-3 py-1.5 text-sm backdrop-blur-md"
+											className="flex items-center gap-1 rounded-full border border-primary/20 bg-white/70 px-3 py-1.5 text-sm backdrop-blur-md"
 										>
 											{lib.name}
 											<button
@@ -815,7 +815,7 @@ export default function ShelvePage() {
 										type="button"
 										onClick={handleFindNearby}
 										disabled={isFindingNearby}
-										className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-white/40 bg-white/70 px-4 py-3 text-sm font-medium backdrop-blur-md transition-opacity hover:bg-white/90 disabled:opacity-50"
+										className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-primary/20 bg-white/70 px-4 py-3 text-sm font-medium backdrop-blur-md transition-opacity hover:bg-white/90 disabled:opacity-50"
 									>
 										<MapPin className="h-5 w-5 flex-shrink-0 text-primary" />
 										{isFindingNearby
@@ -841,7 +841,7 @@ export default function ShelvePage() {
 													onClick={() =>
 														handleAddLibrary(lib)
 													}
-													className="flex flex-shrink-0 items-center gap-1.5 rounded-full border border-white/40 bg-white/70 px-3 py-2 text-sm backdrop-blur-md transition-opacity hover:bg-white/90"
+													className="flex flex-shrink-0 items-center gap-1.5 rounded-full border border-primary/20 bg-white/70 px-3 py-2 text-sm backdrop-blur-md transition-opacity hover:bg-white/90"
 												>
 													<MapPin className="h-3.5 w-3.5 text-primary/70" />
 													{lib.name}
@@ -852,7 +852,7 @@ export default function ShelvePage() {
 								)}
 
 								<div className="flex gap-2">
-									<div className="flex flex-1 items-center gap-2 rounded-xl border border-white/40 bg-white/70 px-4 py-3 backdrop-blur-md">
+									<div className="flex flex-1 items-center gap-2 rounded-xl border border-primary/20 bg-white/70 px-4 py-3 backdrop-blur-md">
 										<MapPin className="h-5 w-5 flex-shrink-0 text-foreground/50" />
 										<input
 											type="search"
@@ -874,7 +874,7 @@ export default function ShelvePage() {
 
 								{showLibrarySearch &&
 									librarySearchResults.length > 0 && (
-										<ul className="mt-2 max-h-48 overflow-y-auto rounded-xl border border-white/40 bg-white/70 backdrop-blur-md">
+										<ul className="mt-2 max-h-48 overflow-y-auto rounded-xl border border-primary/20 bg-white/70 backdrop-blur-md">
 											{librarySearchResults.map((lib) => (
 												<li key={lib.id}>
 													<button

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { BookOpen, MapPin, X, Hourglass, MailQuestion, CalendarClock, PartyPopper, ExternalLink } from "lucide-react";
 import {
 	cancelExchange,
+	cancelScheduledExchange,
 	rejectExchange,
 	proposeTimes,
 	counterRequestExchange,
@@ -15,7 +16,9 @@ import {
 	cancelExchangeNoMatchingTime,
 	markExchangeCompleted,
 	reportNoShow,
+	sendManualReminder,
 } from "@/app/actions/exchange";
+import InlineLoadingLogo from "@/components/InlineLoadingLogo";
 
 const CONDITION_LABELS: Record<string, string> = {
 	S: "S급",
@@ -98,7 +101,7 @@ function BookCard({
 	label: string;
 }) {
 	return (
-		<div className="flex flex-1 flex-col items-center gap-2 rounded-xl border border-white/40 bg-white/70 p-4 backdrop-blur-md">
+		<div className="flex flex-1 flex-col items-center gap-2 rounded-xl border border-primary/20 bg-white/70 p-4 backdrop-blur-md">
 			<span className="text-xs font-medium text-primary">{label}</span>
 			<div className="relative h-24 w-16 overflow-hidden rounded-lg bg-neutral-200">
 				{book.thumbnail_url ? (
@@ -196,9 +199,9 @@ function TimeSelectionModal({
 		>
 			<div
 				onClick={(e) => e.stopPropagation()}
-				className="flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl border border-white/40 bg-white/90 shadow-xl backdrop-blur-md"
+				className="flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl border border-primary/20 bg-white/90 shadow-xl backdrop-blur-md"
 			>
-				<div className="flex items-center justify-between border-b border-white/40 px-4 py-3">
+				<div className="flex items-center justify-between border-b border-primary/20 px-4 py-3">
 					<h3 className="text-base font-semibold text-foreground">
 						만남 시간 제안하기
 					</h3>
@@ -247,7 +250,7 @@ function TimeSelectionModal({
 						</div>
 					))}
 				</div>
-				<div className="border-t border-white/40 p-4">
+				<div className="border-t border-primary/20 p-4">
 					<button
 						type="button"
 						onClick={handleSubmit}
@@ -339,6 +342,7 @@ function TimeConfirmationModal({
 		setIsCanceling(true);
 		try {
 			await cancelExchangeNoMatchingTime(exchangeId);
+			router.refresh();
 			router.push("/");
 		} catch (err) {
 			alert(err instanceof Error ? err.message : "취소 실패");
@@ -420,12 +424,14 @@ function NoShowModal({
 	onSendReminder,
 	onCancelExchange,
 	isReporting,
+	isSendingReminder,
 }: {
 	isOpen: boolean;
 	onClose: () => void;
-	onSendReminder: () => void;
+	onSendReminder: () => Promise<void>;
 	onCancelExchange: () => Promise<void>;
 	isReporting: boolean;
+	isSendingReminder: boolean;
 }) {
 	if (!isOpen) return null;
 	return (
@@ -435,9 +441,9 @@ function NoShowModal({
 		>
 			<div
 				onClick={(e) => e.stopPropagation()}
-				className="w-full max-w-lg overflow-hidden rounded-2xl border border-white/40 bg-white/90 shadow-xl backdrop-blur-md"
+				className="w-full max-w-lg overflow-hidden rounded-2xl border border-primary/20 bg-white/90 shadow-xl backdrop-blur-md"
 			>
-				<div className="border-b border-white/40 px-4 py-3">
+				<div className="border-b border-primary/20 px-4 py-3">
 					<h3 className="text-base font-semibold text-foreground">
 						상대방이 오지 않나요?
 					</h3>
@@ -448,10 +454,13 @@ function NoShowModal({
 				<div className="flex flex-col gap-2 p-4">
 					<button
 						type="button"
-						onClick={() => onSendReminder()}
-						className="w-full rounded-xl bg-primary py-3 text-sm font-medium text-white transition-opacity hover:opacity-90"
+						onClick={async () => {
+							await onSendReminder();
+						}}
+						disabled={isSendingReminder}
+						className="w-full rounded-xl bg-primary py-3 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
 					>
-						상대방에게 알림 보내기
+						{isSendingReminder ? "보내는 중..." : "상대방에게 알림 보내기"}
 					</button>
 					<button
 						type="button"
@@ -526,9 +535,9 @@ function RequestDifferentBookModal({
 		>
 			<div
 				onClick={(e) => e.stopPropagation()}
-				className="flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl border border-white/40 bg-white/90 shadow-xl backdrop-blur-md"
+				className="flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl border border-primary/20 bg-white/90 shadow-xl backdrop-blur-md"
 			>
-				<div className="flex items-center justify-between border-b border-white/40 px-4 py-3">
+				<div className="flex items-center justify-between border-b border-primary/20 px-4 py-3">
 					<h3 className="text-base font-semibold text-foreground">
 						다른 책 요청하기
 					</h3>
@@ -543,9 +552,10 @@ function RequestDifferentBookModal({
 				</div>
 				<div className="flex-1 overflow-y-auto p-4">
 					{loading ? (
-						<p className="py-8 text-center text-sm text-muted-foreground">
-							불러오는 중...
-						</p>
+						<InlineLoadingLogo
+							className="h-16 w-16"
+							paddingClassName="py-8"
+						/>
 					) : books.length === 0 ? (
 						<p className="py-8 text-center text-sm text-muted-foreground">
 							상대방이 이 도서관에 등록한 다른 교환 가능한 책이 없습니다.
@@ -560,7 +570,7 @@ function RequestDifferentBookModal({
 									className={`flex items-center gap-3 rounded-xl border p-3 text-left transition-colors ${
 										selectedId === book.id
 											? "border-primary bg-primary/10"
-											: "border-white/40 bg-white/60 hover:bg-white/80"
+											: "border-primary/20 bg-white/60 hover:bg-white/80"
 									}`}
 								>
 									<div className="h-14 w-10 flex-shrink-0 overflow-hidden rounded bg-neutral-200">
@@ -585,7 +595,7 @@ function RequestDifferentBookModal({
 					)}
 				</div>
 				{books.length > 0 && (
-					<div className="border-t border-white/40 p-4">
+					<div className="border-t border-primary/20 p-4">
 						<button
 							type="button"
 							onClick={handleSubmit}
@@ -612,6 +622,7 @@ export default function ExchangeInteractiveUI({
 	const [showNoShowModal, setShowNoShowModal] = useState(false);
 	const [isCompleting, setIsCompleting] = useState(false);
 	const [isReportingNoShow, setIsReportingNoShow] = useState(false);
+	const [isSendingReminder, setIsSendingReminder] = useState(false);
 
 	const myBook = isRequester ? exchange.requester_book : exchange.owner_book;
 	const targetBook = isRequester ? exchange.owner_book : exchange.requester_book;
@@ -621,6 +632,7 @@ export default function ExchangeInteractiveUI({
 		if (!window.confirm("교환을 취소하시겠습니까?")) return;
 		try {
 			await cancelExchange(exchange.id);
+			router.refresh();
 			router.push("/");
 		} catch (err) {
 			alert(err instanceof Error ? err.message : "취소 실패");
@@ -631,6 +643,7 @@ export default function ExchangeInteractiveUI({
 		if (!window.confirm("교환 요청을 거절하시겠습니까?")) return;
 		try {
 			await rejectExchange(exchange.id);
+			router.refresh();
 			router.push("/");
 		} catch (err) {
 			alert(err instanceof Error ? err.message : "거절 실패");
@@ -652,7 +665,7 @@ export default function ExchangeInteractiveUI({
 				{/* Location - Above Match-up, clickable link to library */}
 				<Link
 					href={`/library/${exchange.library.id}`}
-					className="group flex items-center gap-2 rounded-xl border border-white/40 bg-white/60 px-4 py-3 backdrop-blur-md transition-colors hover:border-primary/30 hover:bg-white/80"
+					className="group flex items-center gap-2 rounded-xl border border-primary/20 bg-white/60 px-4 py-3 backdrop-blur-md transition-colors hover:border-primary/30 hover:bg-white/80"
 				>
 					<MapPin className="h-5 w-5 flex-shrink-0 text-primary" />
 					<div className="min-w-0 flex-1">
@@ -668,7 +681,7 @@ export default function ExchangeInteractiveUI({
 				</Link>
 
 				{/* Match-up Card */}
-				<section className="rounded-2xl border border-white/40 bg-white/60 p-4 shadow-sm backdrop-blur-md">
+				<section className="rounded-2xl border border-primary/20 bg-white/60 p-4 shadow-sm backdrop-blur-md">
 					<div className="flex items-stretch gap-4">
 						<Link
 							href={`/book/${myBook.id}`}
@@ -690,7 +703,7 @@ export default function ExchangeInteractiveUI({
 
 				{/* Status: REQUESTED */}
 				{exchange.status === "REQUESTED" && (
-					<section className="rounded-2xl border border-white/40 bg-white/60 p-4 shadow-sm backdrop-blur-md">
+					<section className="rounded-2xl border border-primary/20 bg-white/60 p-4 shadow-sm backdrop-blur-md">
 						{isRequester ? (
 							<>
 								<WaitMessageCard
@@ -741,7 +754,7 @@ export default function ExchangeInteractiveUI({
 
 				{/* Status: TIME_PROPOSED */}
 				{exchange.status === "TIME_PROPOSED" && (
-					<section className="rounded-2xl border border-white/40 bg-white/60 p-4 shadow-sm backdrop-blur-md">
+					<section className="rounded-2xl border border-primary/20 bg-white/60 p-4 shadow-sm backdrop-blur-md">
 						{isOwner ? (
 							<WaitMessageCard
 								icon={CalendarClock}
@@ -764,7 +777,7 @@ export default function ExchangeInteractiveUI({
 
 				{/* Status: COUNTER_REQUESTED */}
 				{exchange.status === "COUNTER_REQUESTED" && (
-					<section className="rounded-2xl border border-white/40 bg-white/60 p-4 shadow-sm backdrop-blur-md">
+					<section className="rounded-2xl border border-primary/20 bg-white/60 p-4 shadow-sm backdrop-blur-md">
 						{isOwner ? (
 							<WaitMessageCard
 								icon={MailQuestion}
@@ -851,7 +864,7 @@ export default function ExchangeInteractiveUI({
 									교환 약속이 확정되었습니다!
 								</h3>
 							</div>
-							<div className="space-y-3 rounded-xl border border-white/40 bg-white/60 p-4 backdrop-blur-md">
+							<div className="space-y-3 rounded-xl border border-primary/20 bg-white/60 p-4 backdrop-blur-md">
 								{exchange.meet_at && (
 									<div>
 										<p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -927,7 +940,7 @@ export default function ExchangeInteractiveUI({
 											className={`w-full rounded-xl border py-3 text-base font-semibold backdrop-blur-md transition-opacity disabled:cursor-not-allowed disabled:opacity-60 disabled:bg-neutral-400 disabled:text-white ${
 												isBeforeMeeting
 													? "border-neutral-400 bg-neutral-400 text-white opacity-70"
-													: "border-white/40 bg-primary text-white hover:opacity-90"
+													: "border-primary/20 bg-primary text-white hover:opacity-90"
 											}`}
 										>
 											{(isRequester ? exchange.requester_completed : exchange.owner_completed)
@@ -953,6 +966,28 @@ export default function ExchangeInteractiveUI({
 											}`}
 										>
 											{isReportingNoShow ? "처리 중..." : "상대방이 오지 않아요"}
+										</button>
+										<button
+											type="button"
+											onClick={async () => {
+												if (!window.confirm("교환 일정을 취소하시겠습니까? 상대방에게 알림이 전달됩니다."))
+													return;
+												try {
+													await cancelScheduledExchange(
+														exchange.id,
+														exchange.requester_book.id,
+														exchange.owner_book.id,
+													);
+													router.refresh();
+													router.push("/");
+												} catch (err) {
+													alert(err instanceof Error ? err.message : "취소 실패");
+												}
+											}}
+											disabled={isCompleting}
+											className="w-full rounded-xl border border-primary/20 bg-transparent py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-primary/5 hover:text-foreground disabled:opacity-50"
+										>
+											일정 취소하기
 										</button>
 									</div>
 								);
@@ -988,12 +1023,24 @@ export default function ExchangeInteractiveUI({
 				{!["REQUESTED", "TIME_PROPOSED", "COUNTER_REQUESTED", "REJECTED", "CANCELED", "SCHEDULED", "COMPLETED"].includes(
 					exchange.status,
 				) && (
-					<section className="rounded-2xl border border-white/40 bg-white/60 p-4 shadow-sm backdrop-blur-md">
+					<section className="rounded-2xl border border-primary/20 bg-white/60 p-4 shadow-sm backdrop-blur-md">
 						<p className="text-sm text-muted-foreground">
 							상태: {getExchangeStatusLabel(exchange.status)}
 						</p>
 					</section>
 				)}
+
+				{/* Contact Support - bottom */}
+				<section className="pt-6 text-center">
+					<Link
+						href="https://forms.gle/YsQ7RjttpZC2vVMw6"
+						target="_blank"
+						rel="noopener noreferrer"
+						className="text-sm text-muted-foreground underline underline-offset-2 transition-colors hover:text-foreground"
+					>
+						서비스 이용에 문제가 있으신가요? 고객센터 문의하기
+					</Link>
+				</section>
 			</main>
 
 			{showTimeModal && (
@@ -1020,9 +1067,17 @@ export default function ExchangeInteractiveUI({
 				<NoShowModal
 					isOpen={showNoShowModal}
 					onClose={() => setShowNoShowModal(false)}
-					onSendReminder={() => {
-						alert("상대방에게 알림을 보냈습니다.");
-						setShowNoShowModal(false);
+					onSendReminder={async () => {
+						setIsSendingReminder(true);
+						try {
+							await sendManualReminder(exchange.id);
+							alert("상대방에게 알림을 보냈습니다.");
+							setShowNoShowModal(false);
+						} catch (err) {
+							alert(err instanceof Error ? err.message : "알림 전송 실패");
+						} finally {
+							setIsSendingReminder(false);
+						}
 					}}
 					onCancelExchange={async () => {
 						setIsReportingNoShow(true);
@@ -1041,6 +1096,7 @@ export default function ExchangeInteractiveUI({
 						}
 					}}
 					isReporting={isReportingNoShow}
+					isSendingReminder={isSendingReminder}
 				/>
 			)}
 		</>

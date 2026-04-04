@@ -220,3 +220,7 @@ CREATE POLICY "book_libraries_delete_own" ON public.book_libraries FOR DELETE US
 CREATE POLICY "exchanges_select" ON public.exchanges FOR SELECT USING (auth.uid() = requester_id OR auth.uid() = owner_id);
 CREATE POLICY "exchanges_insert" ON public.exchanges FOR INSERT WITH CHECK (auth.uid() = requester_id);
 CREATE POLICY "exchanges_update" ON public.exchanges FOR UPDATE USING (auth.uid() = requester_id OR auth.uid() = owner_id);
+
+-- -----------------------------------------------------------------------------
+-- 7. NOTIFICATIONS (see migration 20250223230000_add_notifications.sql)
+-- -----------------------------------------------------------------------------
