@@ -16,13 +16,46 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+/** Public site URL for OG/Twitter absolute URLs. Set `NEXT_PUBLIC_SITE_URL` in production. */
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ||
+  "https://your-production-domain.com";
+
+const metadataBase = new URL(
+  siteUrl.startsWith("http") ? siteUrl : `https://${siteUrl}`,
+);
+
 export const metadata: Metadata = {
-  title: "Seo-Ro | A Station where Books meet People",
-  description: "Location-based P2P book exchange at public libraries",
+  metadataBase,
+  title: "서로(Seo-Ro) - 우리 동네 도서관 책 교환 커뮤니티",
+  description:
+    "다 읽은 책, 동네 도서관에서 이웃과 교환해보세요. 서로 책을 나누며 연결되는 따뜻한 경험!",
   manifest: "/manifest.json",
   icons: {
     icon: "/icon.png",
     apple: "/apple-icon.png",
+  },
+  openGraph: {
+    title: "서로(Seo-Ro) - 우리 동네 도서관 책 교환 커뮤니티",
+    description: "다 읽은 책, 동네 도서관에서 이웃과 교환해보세요!",
+    url: siteUrl,
+    siteName: "서로(Seo-Ro)",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "서로(Seo-Ro) 서비스 썸네일",
+      },
+    ],
+    locale: "ko_KR",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "서로(Seo-Ro) - 우리 동네 책 교환",
+    description: "동네 도서관에서 이웃과 책을 교환해보세요!",
+    images: ["/og-image.png"],
   },
 };
 

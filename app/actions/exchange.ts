@@ -4,6 +4,11 @@ import { revalidatePath } from "next/cache";
 import { createClient, createServiceRoleClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
 import { insertNotification, insertNotificationsForUsers } from "@/app/actions/notifications";
+import {
+	sendExchangeCancellationEmails,
+	sendExchangeConfirmationEmails,
+} from "@/app/actions/sendEmail";
+import { formatMeetAtForEmail } from "@/lib/formatMeetAtForEmail";
 
 export async function requestExchange(
 	requesterBookId: string,
@@ -284,6 +289,62 @@ export async function confirmExchangeTime(
 			"교환 일정 확정",
 			"상대방이 약속 시간을 선택했습니다. 확인해 주세요.",
 			`/exchange/${exchangeId}`,
+		);
+	}
+
+	try {
+		const { data: exRow } = await supabase
+			.from("exchanges")
+			.select(
+				"meet_at, requester_id, owner_id, requester_book_id, owner_book_id, library_id",
+			)
+			.eq("id", exchangeId)
+			.single();
+
+		if (exRow?.meet_at) {
+			const [reqUser, ownUser, reqBook, ownBook, lib] = await Promise.all([
+				supabase
+					.from("users")
+					.select("email, nickname")
+					.eq("id", exRow.requester_id)
+					.single(),
+				supabase
+					.from("users")
+					.select("email, nickname")
+					.eq("id", exRow.owner_id)
+					.single(),
+				supabase
+					.from("books")
+					.select("title")
+					.eq("id", exRow.requester_book_id)
+					.single(),
+				supabase
+					.from("books")
+					.select("title")
+					.eq("id", exRow.owner_book_id)
+					.single(),
+				supabase
+					.from("libraries")
+					.select("name")
+					.eq("id", exRow.library_id)
+					.single(),
+			]);
+
+			await sendExchangeConfirmationEmails({
+				requesterEmail: reqUser.data?.email ?? null,
+				ownerEmail: ownUser.data?.email ?? null,
+				requesterNickname: reqUser.data?.nickname ?? "사용자",
+				ownerNickname: ownUser.data?.nickname ?? "사용자",
+				ownerBookTitle: ownBook.data?.title ?? "(제목 없음)",
+				requesterBookTitle: reqBook.data?.title ?? "(제목 없음)",
+				appointmentTimeFormatted: formatMeetAtForEmail(exRow.meet_at),
+				libraryName: lib.data?.name ?? "도서관",
+			});
+		}
+	} catch (e) {
+		console.error(
+			"[confirmExchangeTime] Exchange confirmation email failed:",
+			e,
 		);
 	}
 }
@@ -747,6 +808,46 @@ export async function cancelScheduledExchange(
 		`/exchange/${exchangeId}`,
 	);
 
+	try {
+		const [reqUser, ownUser, reqBook, ownBook] = await Promise.all([
+			supabase
+				.from("users")
+				.select("email, nickname")
+				.eq("id", ex.requester_id)
+				.single(),
+			supabase
+				.from("users")
+				.select("email, nickname")
+				.eq("id", ex.owner_id)
+				.single(),
+			supabase
+				.from("books")
+				.select("title")
+				.eq("id", requesterBookId)
+				.single(),
+			supabase
+				.from("books")
+				.select("title")
+				.eq("id", ownerBookId)
+				.single(),
+		]);
+
+		await sendExchangeCancellationEmails({
+			requesterEmail: reqUser.data?.email ?? null,
+			ownerEmail: ownUser.data?.email ?? null,
+			requesterNickname: reqUser.data?.nickname ?? "사용자",
+			ownerNickname: ownUser.data?.nickname ?? "사용자",
+			ownerBookTitle: ownBook.data?.title ?? "(제목 없음)",
+			requesterBookTitle: reqBook.data?.title ?? "(제목 없음)",
+			cancelReason: null,
+		});
+	} catch (e) {
+		console.error(
+			"[cancelScheduledExchange] Cancellation email failed:",
+			e,
+		);
+	}
+
 	revalidatePath("/");
 	revalidatePath("/mypage");
 	revalidatePath(`/exchange/${exchangeId}`);
@@ -802,6 +903,44 @@ export async function reportNoShow(
 		"상대방이 약속 장소에 오지 않았다고 신고했습니다. 확인해 주세요.",
 		`/exchange/${exchangeId}`,
 	);
+
+	try {
+		const [reqUser, ownUser, reqBook, ownBook] = await Promise.all([
+			supabase
+				.from("users")
+				.select("email, nickname")
+				.eq("id", ex.requester_id)
+				.single(),
+			supabase
+				.from("users")
+				.select("email, nickname")
+				.eq("id", ex.owner_id)
+				.single(),
+			supabase
+				.from("books")
+				.select("title")
+				.eq("id", requesterBookId)
+				.single(),
+			supabase
+				.from("books")
+				.select("title")
+				.eq("id", ownerBookId)
+				.single(),
+		]);
+
+		await sendExchangeCancellationEmails({
+			requesterEmail: reqUser.data?.email ?? null,
+			ownerEmail: ownUser.data?.email ?? null,
+			requesterNickname: reqUser.data?.nickname ?? "사용자",
+			ownerNickname: ownUser.data?.nickname ?? "사용자",
+			ownerBookTitle: ownBook.data?.title ?? "(제목 없음)",
+			requesterBookTitle: reqBook.data?.title ?? "(제목 없음)",
+			cancelReason:
+				"노쇼 신고로 인해 교환이 취소되었습니다. 내용을 확인해 주세요.",
+		});
+	} catch (e) {
+		console.error("[reportNoShow] Cancellation email failed:", e);
+	}
 
 	revalidatePath("/");
 	revalidatePath("/mypage");
