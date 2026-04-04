@@ -50,7 +50,7 @@ export default function LibraryFilter({
 
 	const handleSearchClick = () => {
 		setIsOpen(false);
-		router.push("/search");
+		router.push("/search?tab=library");
 	};
 
 	return (
@@ -61,7 +61,7 @@ export default function LibraryFilter({
 			<button
 				type="button"
 				onClick={() => setIsOpen((prev) => !prev)}
-				className="flex cursor-pointer items-center gap-1 rounded-full border border-white/40 bg-white/70 px-6 py-2.5 text-sm font-semibold text-primary shadow-md backdrop-blur-md"
+				className="flex cursor-pointer items-center gap-1 rounded-full border border-primary/20 bg-white/70 px-6 py-2.5 text-sm font-semibold text-primary shadow-md backdrop-blur-md"
 				aria-expanded={isOpen}
 				aria-haspopup="listbox"
 				aria-label="Select library"
@@ -71,7 +71,7 @@ export default function LibraryFilter({
 
 			{isOpen && (
 				<div
-					className="absolute top-full z-50 mt-2 flex min-w-[200px] w-max flex-col overflow-hidden rounded-2xl border border-white/40 bg-white/80 shadow-lg backdrop-blur-xl"
+					className="absolute top-full z-50 mt-2 flex min-w-[200px] w-max flex-col overflow-hidden rounded-2xl border border-primary/20 bg-white/80 shadow-lg backdrop-blur-xl"
 					role="listbox"
 				>
 					<button

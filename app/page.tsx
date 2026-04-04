@@ -1,9 +1,24 @@
 import { createClient } from "@/utils/supabase/server";
 import BottomNav from "@/components/BottomNav";
 import LibraryFilter from "@/components/LibraryFilter";
-import { BookOpen } from "lucide-react";
+import BookCard from "@/components/BookCard";
+import Logo from "@/components/Logo";
+import { Library } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+
+function getLibraryNameFromBook(book: { book_libraries?: unknown }): string {
+	const bl = book.book_libraries;
+	if (!bl) return "도서관";
+	const arr = Array.isArray(bl) ? bl : [bl];
+	const first = arr.find(
+		(x: { libraries?: { name?: string }; library_id?: string }) =>
+			x.libraries,
+	);
+	if (!first?.libraries) return "도서관";
+	const name = (first.libraries as { name?: string }).name;
+	return name ?? "도서관";
+}
 
 type Library = { id: string; name: string };
 
@@ -74,27 +89,28 @@ async function getBooks(
 
 	const baseSelect =
 		"id, title, authors, thumbnail_url, condition, user_review, users!owner_id(nickname, bookshelf_score)";
+	const libSelect = "book_libraries!inner(library_id, libraries(id, name))";
 
 	let query;
 
 	if (libraryId && libraryId !== "all") {
 		query = supabase
 			.from("books")
-			.select(`${baseSelect}, book_libraries!inner(library_id)`)
+			.select(`${baseSelect}, ${libSelect}`)
 			.eq("status", "AVAILABLE")
 			.eq("book_libraries.library_id", libraryId)
 			.order("last_bumped_at", { ascending: false });
 	} else if (userLibraryIds.length > 0) {
 		query = supabase
 			.from("books")
-			.select(`${baseSelect}, book_libraries!inner(library_id)`)
+			.select(`${baseSelect}, ${libSelect}`)
 			.eq("status", "AVAILABLE")
 			.in("book_libraries.library_id", userLibraryIds)
 			.order("last_bumped_at", { ascending: false });
 	} else {
 		query = supabase
 			.from("books")
-			.select(baseSelect)
+			.select(`${baseSelect}, ${libSelect}`)
 			.eq("status", "AVAILABLE")
 			.order("last_bumped_at", { ascending: false });
 	}
@@ -147,11 +163,17 @@ export default async function Home({
 		if (libraryId && libraryId !== "all") {
 			selectedLibraryName = await getLibraryName(supabase, libraryId);
 		}
-		books = await getBooks(
-			supabase,
-			libraryId,
-			libraries.map((l) => l.id),
-		);
+		const isInterestedFilter = !libraryId || libraryId === "all";
+		const hasNoInterestedLibraries = libraries.length === 0;
+		if (isInterestedFilter && hasNoInterestedLibraries) {
+			books = [];
+		} else {
+			books = await getBooks(
+				supabase,
+				libraryId,
+				libraries.map((l) => l.id),
+			);
+		}
 	} catch (err) {
 		console.error("[Home] Caught error (full object):", err);
 		errorMessage =
@@ -161,6 +183,8 @@ export default async function Home({
 	}
 
 	const selectedId = libraryId ?? "all";
+	const isEmptyInterestedLibraries =
+		selectedId === "all" && libraries.length === 0 && books.length === 0;
 
 	return (
 		<>
@@ -176,79 +200,66 @@ export default async function Home({
 						{errorMessage}
 					</div>
 				) : books.length === 0 ? (
-					<div className="flex flex-col items-center justify-center gap-4 py-16 text-center">
-						<p className="text-foreground/70">
-							도서관에 등록된 책이 아직 없어요. 제일 먼저 책을
-							등록해 보세요!
-						</p>
-						<Link
-							href="/shelve"
-							className="rounded-full bg-primary px-6 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
-						>
-							교환할 책 꽂기
-						</Link>
-					</div>
+					isEmptyInterestedLibraries ? (
+						<div className="flex min-h-[50vh] flex-col items-center justify-center gap-6 py-16 text-center">
+							<Library
+								className="h-16 w-16 text-muted-foreground/50"
+								strokeWidth={1.5}
+							/>
+							<p className="text-center text-muted-foreground">
+								관심 도서관이 없네요. 관심도서관을 등록해
+								주세요!
+							</p>
+							<Link
+								href="/search?tab=library"
+								className="rounded-full bg-primary px-6 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
+							>
+								도서관 검색하러 가기
+							</Link>
+						</div>
+					) : (
+						<div className="flex flex-col items-center justify-center gap-4 py-16 text-center">
+							<p className="text-foreground/70">
+								도서관에 등록된 책이 아직 없어요. 제일 먼저 책을
+								등록해 보세요!
+							</p>
+							<Link
+								href="/shelve"
+								className="rounded-full bg-primary px-6 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
+							>
+								교환할 책 꽂기
+							</Link>
+						</div>
+					)
 				) : (
-					<div className="flex flex-col gap-4">
+					<div className="flex flex-col gap-3">
 						{books.map((book) => {
-							const owner =
-								book.users &&
-								typeof book.users === "object" &&
-								!Array.isArray(book.users)
-									? (book.users as {
-											nickname: string | null;
-											bookshelf_score: number;
-										})
-									: null;
+							const bl = book.book_libraries;
+							const blArr = Array.isArray(bl)
+								? bl
+								: bl
+									? [bl]
+									: [];
+							const isInterested =
+								libraries.length > 0 &&
+								blArr.some((x: { library_id?: string }) =>
+									libraries.some(
+										(l) => l.id === x.library_id,
+									),
+								);
 
 							return (
-								<article
+								<BookCard
 									key={book.id}
-									className="flex gap-4 rounded-2xl border border-white/40 bg-white/60 p-4 shadow-sm backdrop-blur-md"
-								>
-									{/* Thumbnail */}
-									<div className="h-28 w-20 flex-shrink-0 overflow-hidden rounded-lg bg-neutral-200 shadow-sm">
-										{book.thumbnail_url ? (
-											<img
-												src={book.thumbnail_url}
-												alt={book.title ?? "Book cover"}
-												className="h-full w-full object-cover"
-											/>
-										) : (
-											<div className="flex h-full w-full items-center justify-center bg-neutral-200 text-neutral-400">
-												<BookOpen
-													className="h-10 w-10"
-													strokeWidth={1.5}
-												/>
-											</div>
-										)}
-									</div>
-
-									{/* Details */}
-									<div className="min-w-0 flex-1">
-										<h2 className="truncate text-lg font-bold text-foreground">
-											{book.title}
-										</h2>
-										<p className="text-sm text-neutral-500">
-											{book.authors ?? "Unknown author"}
-										</p>
-										<span className="mt-1 inline-block rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">
-											{book.condition}급
-										</span>
-										{book.user_review && (
-											<blockquote className="mt-2 rounded-md bg-white/40 p-2 text-sm italic text-gray-700">
-												{book.user_review}
-											</blockquote>
-										)}
-										{owner && (
-											<p className="mt-2 text-right text-xs text-neutral-400">
-												{owner.nickname ?? "Anonymous"}{" "}
-												· {owner.bookshelf_score ?? 0}{" "}
-												Vol
-											</p>
-										)}
-									</div>
-								</article>
+									id={book.id}
+									title={book.title ?? ""}
+									authors={book.authors ?? null}
+									thumbnailUrl={book.thumbnail_url ?? null}
+									condition={book.condition ?? "B"}
+									libraryName={getLibraryNameFromBook(book)}
+									isInterestedLibrary={isInterested}
+									isSwapped={false}
+								/>
 							);
 						})}
 					</div>

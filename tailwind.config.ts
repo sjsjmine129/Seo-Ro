@@ -1,7 +1,7 @@
 import type { Config } from 'tailwindcss'
 
 /**
- * Seo-Ro "Frosted Paper" design system (UI_SPECS.md).
+ * Seo-Ro design system – Lavender/Violet theme (from app icon).
  * Tailwind v4 prefers @theme in CSS (see app/globals.css); this file keeps
  * theme tokens in sync for tooling and reference.
  */
@@ -13,9 +13,12 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        background: '#F9F5EB', // Warm Beige
-        primary: '#2F5233',   // Forest Green
-        accent: '#C15B46',    // Terracotta
+        background: '#FAF9FF', // Light Lavender
+        foreground: '#1F1F1F', // Deep Charcoal
+        primary: '#847DFF',   // Vibrant Lavender/Violet
+        accent: '#6B63E6',    // Darker Violet
+        'glass-border': 'rgb(132 125 255 / 0.2)',
+        'glass-bg': 'rgb(255 255 255 / 0.92)',
       },
       backdropBlur: {
         xs: '2px',

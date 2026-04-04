@@ -1,0 +1,2 @@
+-- Add COUNTER_REQUESTED to exchange_status enum
+ALTER TYPE exchange_status ADD VALUE IF NOT EXISTS 'COUNTER_REQUESTED';

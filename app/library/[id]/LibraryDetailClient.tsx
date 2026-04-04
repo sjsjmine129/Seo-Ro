@@ -72,7 +72,7 @@ export default function LibraryDetailClient({
             href={library.homepage_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-white/40 bg-white/90 py-3 text-sm font-medium text-primary shadow-sm backdrop-blur-md transition-opacity hover:opacity-90"
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-primary/20 bg-white/90 py-3 text-sm font-medium text-primary shadow-sm backdrop-blur-md transition-opacity hover:opacity-90"
           >
             <Globe className="h-4 w-4" />
             홈페이지
@@ -82,7 +82,7 @@ export default function LibraryDetailClient({
           type="button"
           onClick={handleToggle}
           disabled={loading}
-          className={`flex flex-1 items-center justify-center gap-2 rounded-xl border border-white/40 py-3 text-sm font-medium shadow-sm backdrop-blur-md transition-opacity hover:opacity-90 disabled:opacity-60 ${
+          className={`flex flex-1 items-center justify-center gap-2 rounded-xl border border-primary/20 py-3 text-sm font-medium shadow-sm backdrop-blur-md transition-opacity hover:opacity-90 disabled:opacity-60 ${
             interested
               ? 'bg-accent/20 text-accent border-accent/30'
               : 'bg-white/90 text-primary'

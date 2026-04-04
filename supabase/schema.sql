@@ -19,8 +19,10 @@ CREATE TYPE book_status AS ENUM ('AVAILABLE', 'SWAPPING', 'SWAPPED', 'HIDDEN');
 
 CREATE TYPE exchange_status AS ENUM (
   'REQUESTED',
+  'COUNTER_REQUESTED',
   'ACCEPTED',
   'SCHEDULED',
+  'TIME_PROPOSED',
   'COMPLETED',
   'CANCELED',
   'REJECTED'
@@ -116,6 +118,7 @@ CREATE TABLE public.books (
   authors TEXT,
   publisher TEXT,
   thumbnail_url TEXT,
+  user_images TEXT[] NOT NULL,
   user_review VARCHAR(100),
   condition book_condition NOT NULL,
   status book_status NOT NULL DEFAULT 'AVAILABLE',
@@ -141,6 +144,7 @@ CREATE TABLE public.exchanges (
   owner_book_id UUID NOT NULL REFERENCES public.books(id) ON DELETE CASCADE,
   library_id UUID NOT NULL REFERENCES public.libraries(id) ON DELETE CASCADE,
   meet_at TIMESTAMPTZ,
+  proposed_times JSONB NOT NULL DEFAULT '[]'::jsonb,
   status exchange_status NOT NULL DEFAULT 'REQUESTED',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -216,3 +220,7 @@ CREATE POLICY "book_libraries_delete_own" ON public.book_libraries FOR DELETE US
 CREATE POLICY "exchanges_select" ON public.exchanges FOR SELECT USING (auth.uid() = requester_id OR auth.uid() = owner_id);
 CREATE POLICY "exchanges_insert" ON public.exchanges FOR INSERT WITH CHECK (auth.uid() = requester_id);
 CREATE POLICY "exchanges_update" ON public.exchanges FOR UPDATE USING (auth.uid() = requester_id OR auth.uid() = owner_id);
+
+-- -----------------------------------------------------------------------------
+-- 7. NOTIFICATIONS (see migration 20250223230000_add_notifications.sql)
+-- -----------------------------------------------------------------------------
