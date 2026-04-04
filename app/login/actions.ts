@@ -16,6 +16,34 @@ function isUnverifiedEmailError(error: { message: string; code?: string }): bool
   )
 }
 
+/** Map Supabase Auth English messages to Korean for the login UI. */
+function mapLoginErrorToKorean(error: { message: string; code?: string }): string {
+  const msg = error.message.toLowerCase()
+  const code = (error.code ?? '').toLowerCase()
+
+  if (
+    msg.includes('invalid login credentials') ||
+    code === 'invalid_credentials' ||
+    msg.includes('invalid credentials')
+  ) {
+    return '이메일 또는 비밀번호가 올바르지 않습니다.'
+  }
+
+  if (
+    msg.includes('invalid email') ||
+    msg.includes('email format') ||
+    msg.includes('valid email') ||
+    msg.includes('unable to validate email') ||
+    msg.includes('malformed') ||
+    code === 'validation_failed' ||
+    (code.includes('email') && (msg.includes('invalid') || msg.includes('format')))
+  ) {
+    return '유효하지 않은 이메일 형식입니다.'
+  }
+
+  return '로그인 중 오류가 발생했습니다. 다시 시도해 주세요.'
+}
+
 export async function login(formData: FormData) {
   const supabase = await createClient()
   const email = (formData.get('email') as string)?.trim()
@@ -31,7 +59,7 @@ export async function login(formData: FormData) {
     if (isUnverifiedEmailError(error)) {
       return { error: UNVERIFIED_EMAIL_MESSAGE }
     }
-    return { error: error.message }
+    return { error: mapLoginErrorToKorean(error) }
   }
 
   redirect('/')
