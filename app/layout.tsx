@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { GoogleTagManager, GoogleAnalytics } from "@next/third-parties/google";
+import { absolutePublicUrl, getPublicSiteUrl } from "@/lib/siteUrl";
 import "./globals.css";
 
 // Favicon: after changing app/icon.png or app/apple-icon.png, restart the dev server
@@ -16,14 +17,10 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-/** Public site URL for OG/Twitter absolute URLs. Set `NEXT_PUBLIC_SITE_URL` in production. */
-const siteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ||
-  "https://your-production-domain.com";
-
-const metadataBase = new URL(
-  siteUrl.startsWith("http") ? siteUrl : `https://${siteUrl}`,
-);
+/** Canonical origin for metadataBase, og:url, and resolved OG image URLs (default: seo-ro.vercel.app). */
+const siteUrl = getPublicSiteUrl();
+const metadataBase = new URL(siteUrl);
+const ogImageUrl = absolutePublicUrl("/og-image.png");
 
 export const metadata: Metadata = {
   metadataBase,
@@ -42,7 +39,7 @@ export const metadata: Metadata = {
     siteName: "서로(Seo-Ro)",
     images: [
       {
-        url: "/og-image.png",
+        url: ogImageUrl,
         width: 1200,
         height: 630,
         alt: "서로(Seo-Ro) 서비스 썸네일",
@@ -55,7 +52,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "서로(Seo-Ro) - 우리 동네 책 교환",
     description: "동네 도서관에서 이웃과 책을 교환해보세요!",
-    images: ["/og-image.png"],
+    images: [ogImageUrl],
   },
 };
 
