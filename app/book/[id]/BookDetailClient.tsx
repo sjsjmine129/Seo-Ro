@@ -12,11 +12,13 @@ import ConditionBadgeWithTooltip, {
 import LibraryLocationsBadge from "./components/LibraryLocationsBadge";
 import type { LibraryItem } from "./components/LibraryLocationsBadge";
 import SelectMyBookModal from "./components/SelectMyBookModal";
+import UserProfileModal from "@/components/UserProfileModal";
 import { deleteBook } from "./actions";
 
 type BookDetailClientProps = {
 	book: {
 		id: string;
+		owner_id: string;
 		title: string;
 		authors: string | null;
 		publisher: string | null;
@@ -35,7 +37,6 @@ type BookDetailClientProps = {
 	conditionColor: string;
 	conditionLabel: string;
 	isOwner: boolean;
-	isAvailable: boolean;
 	activeExchangeId: string | null;
 };
 
@@ -45,12 +46,12 @@ export default function BookDetailClient({
 	conditionColor,
 	conditionLabel,
 	isOwner,
-	isAvailable,
 	activeExchangeId,
 }: BookDetailClientProps) {
 	const router = useRouter();
 	const [isLibraryModalOpen, setIsLibraryModalOpen] = useState(false);
 	const [isSwapModalOpen, setIsSwapModalOpen] = useState(false);
+	const [isOwnerProfileOpen, setIsOwnerProfileOpen] = useState(false);
 
 	const inActiveExchange = !!activeExchangeId;
 	const isSwappingWithOther = book.status === "SWAPPING" && !inActiveExchange;
@@ -70,7 +71,7 @@ export default function BookDetailClient({
 
 	return (
 		<>
-			<div className="relative mx-auto flex min-h-screen max-w-lg flex-col pb-40">
+			<div className="relative flex w-full flex-col">
 				<div
 					className="sticky z-40 mb-4 flex justify-between items-center px-4 "
 					style={{
@@ -86,7 +87,7 @@ export default function BookDetailClient({
 					)}
 				</div>
 
-				<main className="flex flex-col px-6 pt-4">
+				<main className="flex flex-col gap-8 px-6 pb-6 pt-4">
 					{/* Image Carousel */}
 					<div className="overflow-hidden rounded-2xl border border-primary/20 bg-white/60 shadow-sm">
 						<BookImageCarousel
@@ -101,7 +102,7 @@ export default function BookDetailClient({
 					</div>
 
 					{/* Book Header: Title + Author/Publisher | User Profile */}
-					<section className="mt-4">
+					<section>
 						<div className="flex justify-between items-start gap-4">
 							{/* Left: Title + Badge, then Author/Publisher */}
 							<div className="min-w-0 flex-1 flex flex-col">
@@ -138,58 +139,66 @@ export default function BookDetailClient({
 									)}
 								</div>
 							</div>
-							{/* Right: Owner Profile - horizontal card */}
-							<div className="flex flex-shrink-0 items-center gap-3 rounded-2xl border border-primary/20 bg-white/60 p-2.5 shadow-sm">
-								{book.owner?.profile_image ? (
-									<img
-										src={book.owner.profile_image}
-										alt={
-											book.owner.nickname ?? "닉네임 없음"
-										}
-										className="h-10 w-10 rounded-full object-cover ring-2 ring-white/60"
-									/>
-								) : (
-									<div className="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-300 text-neutral-600">
-										<User
-											className="h-5 w-5"
-											strokeWidth={2}
-										/>
-									</div>
-								)}
-								<div className="flex flex-col items-start">
-									<p className="max-w-[80px] truncate text-sm font-medium text-foreground">
-										{book.owner?.nickname ?? "알 수 없음"}
-									</p>
-									{isOwner ? (
-										<button
-											type="button"
-											onClick={handleDelete}
-											disabled={
-												book.status !== "AVAILABLE"
+							{/* Right: Owner Profile - tappable card */}
+							<div className="flex w-[min(100%,11rem)] flex-shrink-0 flex-col gap-1.5 rounded-2xl border border-primary/20 bg-white/60 p-2 shadow-sm">
+								<button
+									type="button"
+									onClick={() => setIsOwnerProfileOpen(true)}
+									className="flex w-full items-center gap-2.5 rounded-xl p-1 text-left transition-colors hover:bg-white/70 active:scale-[0.99]"
+								>
+									{book.owner?.profile_image ? (
+										<img
+											src={book.owner.profile_image}
+											alt={
+												book.owner.nickname ??
+												"닉네임 없음"
 											}
-											className={`mt-0.5 flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium transition-colors ${
-												book.status === "AVAILABLE"
-													? "text-red-600 hover:bg-red-50"
-													: "cursor-not-allowed bg-neutral-200 text-neutral-400"
-											}`}
-										>
-											<Trash2 className="h-3.5 w-3.5" />
-											삭제하기
-										</button>
+											className="h-10 w-10 shrink-0 rounded-full object-cover ring-2 ring-white/60"
+										/>
 									) : (
-										<span className="mt-0.5 rounded-md bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">
-											책장 점수{" "}
-											{book.owner?.bookshelf_score ?? 0}권
-										</span>
+										<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-neutral-300 text-neutral-600">
+											<User
+												className="h-5 w-5"
+												strokeWidth={2}
+											/>
+										</div>
 									)}
-								</div>
+									<div className="min-w-0 flex-1">
+										<p className="truncate text-sm font-medium text-foreground">
+											{book.owner?.nickname ?? "알 수 없음"}
+										</p>
+										{!isOwner && (
+											<span className="mt-0.5 inline-block shrink-0 whitespace-nowrap rounded-md bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">
+												책장 점수{" "}
+												{book.owner?.bookshelf_score ??
+													0}
+												권
+											</span>
+										)}
+									</div>
+								</button>
+								{isOwner && (
+									<button
+										type="button"
+										onClick={handleDelete}
+										disabled={book.status !== "AVAILABLE"}
+										className={`flex w-full items-center justify-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium transition-colors ${
+											book.status === "AVAILABLE"
+												? "text-red-600 hover:bg-red-50"
+												: "cursor-not-allowed bg-neutral-200/80 text-neutral-400"
+										}`}
+									>
+										<Trash2 className="h-3.5 w-3.5" />
+										삭제하기
+									</button>
+								)}
 							</div>
 						</div>
 					</section>
 
 					{/* User Review Section */}
 					{book.user_review && (
-						<section className="mt-4">
+						<section>
 							<blockquote className="flex items-center gap-3 rounded-xl border border-primary/20 bg-white/70 px-4 py-4 backdrop-blur-md">
 								<Quote
 									className="h-6 w-6 flex-shrink-0 text-primary/40"
@@ -203,8 +212,10 @@ export default function BookDetailClient({
 					)}
 				</main>
 
-				{/* Floating Bottom Action - hidden when modals open; show only for non-owners */}
-				{!isLibraryModalOpen && !isSwapModalOpen && !isOwner && (
+				{/* Floating Bottom Action — owner: edit; others: exchange flow */}
+				{!isLibraryModalOpen &&
+					!isSwapModalOpen &&
+					!isOwnerProfileOpen && (
 					<div
 						className="fixed left-0 right-0 z-40 px-4"
 						style={{
@@ -212,7 +223,20 @@ export default function BookDetailClient({
 						}}
 					>
 						<div className="mx-auto max-w-lg">
-							{inActiveExchange ? (
+							{isOwner ? (
+								book.status === "AVAILABLE" ? (
+									<Link
+										href={`/book/${book.id}/edit`}
+										className="block w-full rounded-xl bg-primary py-4 text-center text-base font-semibold text-white shadow-lg transition-all hover:opacity-90 active:scale-[0.99]"
+									>
+										등록 내용 수정하기
+									</Link>
+								) : (
+									<p className="rounded-xl border border-primary/20 bg-white/70 py-4 text-center text-sm text-muted-foreground backdrop-blur-md">
+										교환 중인 책은 수정할 수 없어요
+									</p>
+								)
+							) : inActiveExchange ? (
 								<Link
 									href={`/exchange/${activeExchangeId}`}
 									className="block w-full rounded-xl bg-primary py-4 text-center text-base font-semibold text-white shadow-lg transition-all hover:opacity-90 active:scale-[0.99]"
@@ -245,6 +269,11 @@ export default function BookDetailClient({
 					onClose={() => setIsSwapModalOpen(false)}
 					ownerBookId={book.id}
 					libraries={libraries}
+				/>
+				<UserProfileModal
+					userId={book.owner_id}
+					isOpen={isOwnerProfileOpen}
+					onClose={() => setIsOwnerProfileOpen(false)}
 				/>
 			</div>
 		</>

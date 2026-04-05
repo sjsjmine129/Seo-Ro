@@ -1,6 +1,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { redirect, notFound } from "next/navigation";
 import BottomNav from "@/components/BottomNav";
+import RecommendedBooks from "@/components/RecommendedBooks";
 import BookDetailClient from "./BookDetailClient";
 import { getActiveExchangeForBook } from "@/app/actions/exchange";
 
@@ -95,23 +96,22 @@ export default async function BookDetailPage({
 		CONDITION_COLORS[book.condition] ?? CONDITION_COLORS.B;
 	const conditionLabel =
 		CONDITION_LABELS[book.condition] ?? book.condition + "급";
-	const isAvailable = book.status === "AVAILABLE";
 	const isOwner = user.id === book.owner_id;
 
 	const activeExchange = await getActiveExchangeForBook(book.id, user.id);
 
 	return (
-		<>
+		<div className="mx-auto flex w-full max-w-lg flex-col pb-[calc(8rem+env(safe-area-inset-bottom))]">
 			<BookDetailClient
 				book={book}
 				libraries={libraries}
 				conditionColor={conditionColor}
 				conditionLabel={conditionLabel}
 				isOwner={isOwner}
-				isAvailable={isAvailable}
 				activeExchangeId={activeExchange?.id ?? null}
 			/>
+			<RecommendedBooks currentBook={book} />
 			<BottomNav />
-		</>
+		</div>
 	);
 }
