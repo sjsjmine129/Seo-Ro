@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { X, BookOpen, Library, ChevronRight } from "lucide-react";
 import { requestExchange, getUserAvailableBooksInLibrary } from "@/app/actions/exchange";
+import BottomSheetModal from "@/components/BottomSheetModal";
 import InlineLoadingLogo from "@/components/InlineLoadingLogo";
 import AnimatedLogo from "@/components/AnimatedLogo";
 
@@ -104,10 +105,6 @@ export default function SelectMyBookModal({
 		}
 	};
 
-	const handleBackdropClick = (e: React.MouseEvent) => {
-		if (e.target === e.currentTarget) onClose();
-	};
-
 	useEffect(() => {
 		if (isOpen) document.body.style.overflow = "hidden";
 		else document.body.style.overflow = "";
@@ -116,19 +113,14 @@ export default function SelectMyBookModal({
 		};
 	}, [isOpen]);
 
-	if (!isOpen) return null;
-
 	const displayLibrary = selectedLibrary ?? libraries[0] ?? null;
 
 	return (
-		<div
-			onClick={handleBackdropClick}
-			className="fixed inset-0 z-[9999] flex items-end justify-center bg-black/40 p-4 pb-[env(safe-area-inset-bottom)]"
+		<BottomSheetModal
+			open={isOpen}
+			onClose={onClose}
+			className="pointer-events-auto flex w-full max-w-lg flex-col overflow-hidden rounded-t-2xl border border-primary/20 bg-background/95 shadow-xl backdrop-blur-md"
 		>
-			<div
-				onClick={(e) => e.stopPropagation()}
-				className="flex w-full max-w-lg flex-col overflow-hidden rounded-t-2xl border border-primary/20 bg-background/95 shadow-xl backdrop-blur-md"
-			>
 				<div className="flex items-center justify-between border-b border-primary/20 px-4 py-3">
 					{step !== "library" ? (
 						<button
@@ -256,7 +248,6 @@ export default function SelectMyBookModal({
 						</div>
 					)}
 				</div>
-			</div>
-		</div>
+		</BottomSheetModal>
 	);
 }

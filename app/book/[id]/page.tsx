@@ -1,6 +1,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { redirect, notFound } from "next/navigation";
 import BottomNav from "@/components/BottomNav";
+import RecommendedBooks from "@/components/RecommendedBooks";
 import BookDetailClient from "./BookDetailClient";
 import { getActiveExchangeForBook } from "@/app/actions/exchange";
 
@@ -101,7 +102,7 @@ export default async function BookDetailPage({
 	const activeExchange = await getActiveExchangeForBook(book.id, user.id);
 
 	return (
-		<>
+		<div className="mx-auto flex w-full max-w-lg flex-col pb-[calc(8rem+env(safe-area-inset-bottom))]">
 			<BookDetailClient
 				book={book}
 				libraries={libraries}
@@ -111,7 +112,8 @@ export default async function BookDetailPage({
 				isAvailable={isAvailable}
 				activeExchangeId={activeExchange?.id ?? null}
 			/>
+			<RecommendedBooks currentBook={book} />
 			<BottomNav />
-		</>
+		</div>
 	);
 }

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { MapPin, ChevronRight, BookOpen } from "lucide-react";
 import NaverMap from "@/components/NaverMap";
 import BottomNav from "@/components/BottomNav";
+import NearbyLibraries from "@/components/NearbyLibraries";
 import LibraryDetailClient from "./LibraryDetailClient";
 import { addInterest, removeInterest } from "./actions";
 
@@ -107,105 +108,115 @@ export default async function LibraryDetailPage({
 
 	return (
 		<>
-			<div className="flex min-h-screen flex-col bg-background px-4 pb-40 pt-6">
-				<NaverMap
-					lat={Number(library.lat)}
-					lng={Number(library.lng)}
-					libraryName={library.name}
-				/>
+			<div className="mx-auto flex w-full max-w-lg flex-col pb-[calc(8rem+env(safe-area-inset-bottom))]">
+				<div className="flex flex-col gap-8 bg-background px-4 pt-6">
+					<div className="flex flex-col gap-4">
+						<NaverMap
+							lat={Number(library.lat)}
+							lng={Number(library.lng)}
+							libraryName={library.name}
+						/>
 
-				{/* Header */}
-				<h1 className="text-xl pt-2 font-bold text-foreground">
-					{library.name}
-				</h1>
-				{library.address && (
-					<p className="mt-1 flex items-start gap-2 text-sm text-foreground/70">
-						<MapPin className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary/70" />
-						{library.address}
-					</p>
-				)}
+						<div>
+							<h1 className="text-xl font-bold text-foreground">
+								{library.name}
+							</h1>
+							{library.address && (
+								<p className="mt-1 flex items-start gap-2 text-sm text-foreground/70">
+									<MapPin className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary/70" />
+									{library.address}
+								</p>
+							)}
+						</div>
 
-				{/* Action buttons */}
-				<div className="mt-6 ">
-					<LibraryDetailClient
-						library={{
+						<LibraryDetailClient
+							library={{
+								id: library.id,
+								name: library.name,
+								address: library.address ?? null,
+								homepage_url: library.homepage_url ?? null,
+							}}
+							isInterested={isInterested}
+							userLibraryCount={userLibraryCount}
+							maxAllowed={maxAllowed}
+							onAddInterest={addInterest}
+							onRemoveInterest={removeInterest}
+						/>
+					</div>
+
+					{/* Recent books */}
+					<section>
+						<h2 className="mb-3 text-base font-semibold text-foreground">
+							이 도서관에 새로 꽂힌 책
+						</h2>
+						{books.length === 0 ? (
+							<Link
+								href={`/shelve?libraryId=${id}`}
+								className="block rounded-xl border border-primary/20 bg-white/60 py-8 text-center text-sm text-foreground/60 transition-opacity hover:opacity-90"
+							>
+								등록된 책이 없습니다. <br />이 도서관에 제일 먼저
+								책을 꽂아주세요!
+							</Link>
+						) : (
+							<div className="-mx-4 mt-2 flex gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden">
+								{books.map((book) => (
+									<Link
+										key={book.id}
+										href={`/book/${book.id}`}
+										className="flex w-[110px] flex-none flex-col overflow-hidden rounded-xl border border-primary/20 bg-white/90 shadow-sm backdrop-blur-md sm:w-[130px]"
+									>
+										<div className="relative aspect-[3/4] w-full bg-neutral-200">
+											{book.thumbnail_url ? (
+												<img
+													src={book.thumbnail_url}
+													alt={book.title}
+													className="h-full w-full object-cover"
+												/>
+											) : (
+												<div className="flex h-full w-full items-center justify-center text-neutral-400">
+													<BookOpen
+														className="h-10 w-10"
+														strokeWidth={1.5}
+													/>
+												</div>
+											)}
+											<span className="absolute right-1 top-1 rounded bg-primary/90 px-1.5 py-0.5 text-[10px] font-medium text-white">
+												{book.condition}급
+											</span>
+										</div>
+										<div className="p-2">
+											<p className="line-clamp-2 text-sm font-medium text-foreground">
+												{book.title}
+											</p>
+											<p className="mt-0.5 truncate text-xs text-foreground/60">
+												{book.authors ?? "—"}
+											</p>
+										</div>
+									</Link>
+								))}
+								<Link
+									href={homeUrl}
+									className="flex w-[110px] flex-none flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-primary/40 bg-primary/5 py-8 text-primary sm:w-[130px]"
+								>
+									<ChevronRight className="h-6 w-6" />
+									<span className="text-center text-sm font-medium">
+										이 도서관에 꽂힌 책
+										<br />
+										전체 보기
+									</span>
+								</Link>
+							</div>
+						)}
+					</section>
+
+					<NearbyLibraries
+						currentLibrary={{
 							id: library.id,
-							name: library.name,
-							address: library.address ?? null,
-							homepage_url: library.homepage_url ?? null,
+							lat: Number(library.lat),
+							lng: Number(library.lng),
 						}}
-						isInterested={isInterested}
-						userLibraryCount={userLibraryCount}
-						maxAllowed={maxAllowed}
-						onAddInterest={addInterest}
-						onRemoveInterest={removeInterest}
 					/>
 				</div>
-
-				{/* Recent books */}
-				<section className="mt-8">
-					<h2 className="mb-3 text-base font-semibold text-foreground">
-						이 도서관에 새로 꽂힌 책
-					</h2>
-					{books.length === 0 ? (
-						<Link
-							href={`/shelve?libraryId=${id}`}
-							className="block rounded-xl border border-primary/20 bg-white/60 py-8 text-center text-sm text-foreground/60 transition-opacity hover:opacity-90"
-						>
-							등록된 책이 없습니다. <br />이 도서관에 제일 먼저
-							책을 꽂아주세요!
-						</Link>
-					) : (
-						<div className="-mx-4 mt-2 flex gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden">
-							{books.map((book) => (
-								<Link
-									key={book.id}
-									href={`/book/${book.id}`}
-									className="flex w-[110px] flex-none flex-col overflow-hidden rounded-xl border border-primary/20 bg-white/90 shadow-sm backdrop-blur-md sm:w-[130px]"
-								>
-									<div className="relative aspect-[3/4] w-full bg-neutral-200">
-										{book.thumbnail_url ? (
-											<img
-												src={book.thumbnail_url}
-												alt={book.title}
-												className="h-full w-full object-cover"
-											/>
-										) : (
-											<div className="flex h-full w-full items-center justify-center text-neutral-400">
-												<BookOpen
-													className="h-10 w-10"
-													strokeWidth={1.5}
-												/>
-											</div>
-										)}
-										<span className="absolute right-1 top-1 rounded bg-primary/90 px-1.5 py-0.5 text-[10px] font-medium text-white">
-											{book.condition}급
-										</span>
-									</div>
-									<div className="p-2">
-										<p className="line-clamp-2 text-sm font-medium text-foreground">
-											{book.title}
-										</p>
-										<p className="mt-0.5 truncate text-xs text-foreground/60">
-											{book.authors ?? "—"}
-										</p>
-									</div>
-								</Link>
-							))}
-							<Link
-								href={homeUrl}
-								className="flex w-[110px] flex-none flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-primary/40 bg-primary/5 py-8 text-primary sm:w-[130px]"
-							>
-								<ChevronRight className="h-6 w-6" />
-								<span className="text-center text-sm font-medium">
-									이 도서관에 꽂힌 책
-									<br />
-									전체 보기
-								</span>
-							</Link>
-						</div>
-					)}
-				</section>
 			</div>
 
 			{/* Floating bottom button - above BottomNav */}
