@@ -1,11 +1,14 @@
 "use client";
 
-import { Share2, Plus, X } from "lucide-react";
+import { Share, Plus, X } from "lucide-react";
+import { usePathname } from "next/navigation";
 import { useInstallPrompt } from "@/hooks/useInstallPrompt";
 
 export default function InstallPrompt() {
+	const pathname = usePathname();
 	const { shouldShow, platform, dismiss, triggerInstall } = useInstallPrompt();
 
+	if (pathname !== "/") return null;
 	if (!shouldShow) return null;
 
 	return (
@@ -40,7 +43,7 @@ export default function InstallPrompt() {
 							<p className="flex flex-wrap items-center gap-x-1 gap-y-1">
 								하단의
 								<span className="inline-flex items-center gap-0.5 rounded-md bg-white/80 px-1.5 py-0.5 font-medium text-primary shadow-sm">
-									<Share2 className="h-4 w-4" strokeWidth={2} />
+									<Share className="h-4 w-4" strokeWidth={2} />
 									공유
 								</span>
 								버튼을 누르고,
