@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { BookOpen, MapPin, X, Hourglass, MailQuestion, CalendarClock, PartyPopper, ExternalLink } from "lucide-react";
+import { BookOpen, MapPin, X, Hourglass, MailQuestion, CalendarClock, PartyPopper, ExternalLink, User, ChevronRight } from "lucide-react";
 import {
 	cancelExchange,
 	cancelScheduledExchange,
@@ -18,6 +18,9 @@ import {
 	reportNoShow,
 	sendManualReminder,
 } from "@/app/actions/exchange";
+import BottomSheetModal from "@/components/BottomSheetModal";
+import CenterModal from "@/components/CenterModal";
+import UserProfileModal from "@/components/UserProfileModal";
 import InlineLoadingLogo from "@/components/InlineLoadingLogo";
 
 const CONDITION_LABELS: Record<string, string> = {
@@ -73,6 +76,12 @@ type BookInfo = {
 	condition: string;
 };
 
+type ExchangeUserSnippet = {
+	nickname: string | null;
+	profile_image: string | null;
+	bookshelf_score: number;
+};
+
 type ExchangeData = {
 	id: string;
 	status: string;
@@ -81,6 +90,8 @@ type ExchangeData = {
 	requester_book: BookInfo;
 	owner_book: BookInfo;
 	library: { id: string; name: string; address: string | null };
+	requester_user: ExchangeUserSnippet | null;
+	owner_user: ExchangeUserSnippet | null;
 	proposed_times?: string[] | null;
 	meet_at?: string | null;
 	requester_completed?: boolean;
@@ -130,10 +141,12 @@ function BookCard({
 }
 
 function TimeSelectionModal({
+	open,
 	exchangeId,
 	onClose,
 	onSuccess,
 }: {
+	open: boolean;
 	exchangeId: string;
 	onClose: () => void;
 	onSuccess: () => void;
@@ -193,75 +206,71 @@ function TimeSelectionModal({
 	};
 
 	return (
-		<div
-			className="fixed inset-0 z-[9999] flex items-end justify-center bg-black/40 p-4 pb-[env(safe-area-inset-bottom)]"
-			onClick={(e) => e.target === e.currentTarget && onClose()}
+		<BottomSheetModal
+			open={open}
+			onClose={onClose}
+			className="pointer-events-auto flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl border border-primary/20 bg-white/90 shadow-xl backdrop-blur-md"
 		>
-			<div
-				onClick={(e) => e.stopPropagation()}
-				className="flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl border border-primary/20 bg-white/90 shadow-xl backdrop-blur-md"
-			>
-				<div className="flex items-center justify-between border-b border-primary/20 px-4 py-3">
-					<h3 className="text-base font-semibold text-foreground">
-						만남 시간 제안하기
-					</h3>
-					<button
-						type="button"
-						onClick={onClose}
-						className="flex h-8 w-8 items-center justify-center rounded-full text-foreground/70 transition-colors hover:bg-white/60 hover:text-foreground"
-						aria-label="닫기"
-					>
-						<X className="h-5 w-5" />
-					</button>
-				</div>
-				<div className="flex-1 overflow-y-auto p-4">
-					<p className="mb-4 text-sm text-muted-foreground">
-						가능한 시간을 선택해 주세요. (여러 개 선택 가능)
-					</p>
-					{days.map((date) => (
-						<div key={date.toISOString()} className="mb-6">
-							<p className="mb-2 text-sm font-medium text-foreground">
-								{date.toLocaleDateString("ko-KR", {
-									month: "long",
-									day: "numeric",
-									weekday: "short",
-								})}
-							</p>
-							<div className="flex flex-wrap gap-2">
-								{hours.map(({ h, m, label }) => {
-									const key = toSlotKey(date, h, m);
-									const isSelected = selectedSlots.has(key);
-									return (
-										<button
-											key={key}
-											type="button"
-											onClick={() => toggleSlot(date, h, m)}
-											className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-												isSelected
-													? "bg-primary text-white"
-													: "bg-white/60 text-foreground hover:bg-white/80"
-											}`}
-										>
-											{label}
-										</button>
-									);
-								})}
-							</div>
-						</div>
-					))}
-				</div>
-				<div className="border-t border-primary/20 p-4">
-					<button
-						type="button"
-						onClick={handleSubmit}
-						disabled={isSubmitting || selectedSlots.size === 0}
-						className="w-full rounded-xl bg-primary py-3 text-base font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-					>
-						{isSubmitting ? "제안 중..." : "이 시간들로 제안하기"}
-					</button>
-				</div>
+			<div className="flex items-center justify-between border-b border-primary/20 px-4 py-3">
+				<h3 className="text-base font-semibold text-foreground">
+					만남 시간 제안하기
+				</h3>
+				<button
+					type="button"
+					onClick={onClose}
+					className="flex h-8 w-8 items-center justify-center rounded-full text-foreground/70 transition-colors hover:bg-white/60 hover:text-foreground"
+					aria-label="닫기"
+				>
+					<X className="h-5 w-5" />
+				</button>
 			</div>
-		</div>
+			<div className="min-h-0 flex-1 overflow-y-auto p-4">
+				<p className="mb-4 text-sm text-muted-foreground">
+					가능한 시간을 선택해 주세요. (여러 개 선택 가능)
+				</p>
+				{days.map((date) => (
+					<div key={date.toISOString()} className="mb-6">
+						<p className="mb-2 text-sm font-medium text-foreground">
+							{date.toLocaleDateString("ko-KR", {
+								month: "long",
+								day: "numeric",
+								weekday: "short",
+							})}
+						</p>
+						<div className="flex flex-wrap gap-2">
+							{hours.map(({ h, m, label }) => {
+								const key = toSlotKey(date, h, m);
+								const isSelected = selectedSlots.has(key);
+								return (
+									<button
+										key={key}
+										type="button"
+										onClick={() => toggleSlot(date, h, m)}
+										className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+											isSelected
+												? "bg-primary text-white"
+												: "bg-white/60 text-foreground hover:bg-white/80"
+										}`}
+									>
+										{label}
+									</button>
+								);
+							})}
+						</div>
+					</div>
+				))}
+			</div>
+			<div className="border-t border-primary/20 p-4">
+				<button
+					type="button"
+					onClick={handleSubmit}
+					disabled={isSubmitting || selectedSlots.size === 0}
+					className="w-full rounded-xl bg-primary py-3 text-base font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+				>
+					{isSubmitting ? "제안 중..." : "이 시간들로 제안하기"}
+				</button>
+			</div>
+		</BottomSheetModal>
 	);
 }
 
@@ -433,16 +442,12 @@ function NoShowModal({
 	isReporting: boolean;
 	isSendingReminder: boolean;
 }) {
-	if (!isOpen) return null;
 	return (
-		<div
-			className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 p-4"
-			onClick={(e) => e.target === e.currentTarget && onClose()}
+		<CenterModal
+			open={isOpen}
+			onClose={onClose}
+			className="pointer-events-auto w-full max-w-lg overflow-hidden rounded-2xl border border-primary/20 bg-white/90 shadow-xl backdrop-blur-md"
 		>
-			<div
-				onClick={(e) => e.stopPropagation()}
-				className="w-full max-w-lg overflow-hidden rounded-2xl border border-primary/20 bg-white/90 shadow-xl backdrop-blur-md"
-			>
 				<div className="border-b border-primary/20 px-4 py-3">
 					<h3 className="text-base font-semibold text-foreground">
 						상대방이 오지 않나요?
@@ -481,12 +486,12 @@ function NoShowModal({
 						닫기
 					</button>
 				</div>
-			</div>
-		</div>
+		</CenterModal>
 	);
 }
 
 function RequestDifferentBookModal({
+	open,
 	exchangeId,
 	requesterId,
 	libraryId,
@@ -494,6 +499,7 @@ function RequestDifferentBookModal({
 	onClose,
 	onSuccess,
 }: {
+	open: boolean;
 	exchangeId: string;
 	requesterId: string;
 	libraryId: string;
@@ -507,10 +513,12 @@ function RequestDifferentBookModal({
 	const [isSubmitting, setIsSubmitting] = useState(false);
 
 	useEffect(() => {
+		if (!open) return;
+		setLoading(true);
 		getRequesterAvailableBooksInLibrary(requesterId, libraryId, currentRequesterBookId)
 			.then(setBooks)
 			.finally(() => setLoading(false));
-	}, [requesterId, libraryId, currentRequesterBookId]);
+	}, [open, requesterId, libraryId, currentRequesterBookId]);
 
 	const handleSubmit = async () => {
 		if (!selectedId) {
@@ -529,85 +537,81 @@ function RequestDifferentBookModal({
 	};
 
 	return (
-		<div
-			className="fixed inset-0 z-[9999] flex items-end justify-center bg-black/40 p-4 pb-[env(safe-area-inset-bottom)]"
-			onClick={(e) => e.target === e.currentTarget && onClose()}
+		<BottomSheetModal
+			open={open}
+			onClose={onClose}
+			className="pointer-events-auto flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl border border-primary/20 bg-white/90 shadow-xl backdrop-blur-md"
 		>
-			<div
-				onClick={(e) => e.stopPropagation()}
-				className="flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl border border-primary/20 bg-white/90 shadow-xl backdrop-blur-md"
-			>
-				<div className="flex items-center justify-between border-b border-primary/20 px-4 py-3">
-					<h3 className="text-base font-semibold text-foreground">
-						다른 책 요청하기
-					</h3>
-					<button
-						type="button"
-						onClick={onClose}
-						className="flex h-8 w-8 items-center justify-center rounded-full text-foreground/70 transition-colors hover:bg-white/60 hover:text-foreground"
-						aria-label="닫기"
-					>
-						<X className="h-5 w-5" />
-					</button>
-				</div>
-				<div className="flex-1 overflow-y-auto p-4">
-					{loading ? (
-						<InlineLoadingLogo
-							className="h-16 w-16"
-							paddingClassName="py-8"
-						/>
-					) : books.length === 0 ? (
-						<p className="py-8 text-center text-sm text-muted-foreground">
-							상대방이 이 도서관에 등록한 다른 교환 가능한 책이 없습니다.
-						</p>
-					) : (
-						<ul className="flex flex-col gap-2">
-							{books.map((book) => (
-								<button
-									key={book.id}
-									type="button"
-									onClick={() => setSelectedId(book.id)}
-									className={`flex items-center gap-3 rounded-xl border p-3 text-left transition-colors ${
-										selectedId === book.id
-											? "border-primary bg-primary/10"
-											: "border-primary/20 bg-white/60 hover:bg-white/80"
-									}`}
-								>
-									<div className="h-14 w-10 flex-shrink-0 overflow-hidden rounded bg-neutral-200">
-										{book.thumbnail_url ? (
-											<img
-												src={book.thumbnail_url}
-												alt={book.title}
-												className="h-full w-full object-cover"
-											/>
-										) : (
-											<div className="flex h-full w-full items-center justify-center">
-												<BookOpen className="h-6 w-6 text-neutral-400" strokeWidth={1.5} />
-											</div>
-										)}
-									</div>
-									<p className="line-clamp-2 flex-1 text-sm font-medium text-foreground">
-										{book.title}
-									</p>
-								</button>
-							))}
-						</ul>
-					)}
-				</div>
-				{books.length > 0 && (
-					<div className="border-t border-primary/20 p-4">
-						<button
-							type="button"
-							onClick={handleSubmit}
-							disabled={isSubmitting || !selectedId}
-							className="w-full rounded-xl bg-primary py-3 text-base font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-						>
-							{isSubmitting ? "요청 중..." : "이 책으로 교환 요청하기"}
-						</button>
-					</div>
+			<div className="flex items-center justify-between border-b border-primary/20 px-4 py-3">
+				<h3 className="text-base font-semibold text-foreground">
+					다른 책 요청하기
+				</h3>
+				<button
+					type="button"
+					onClick={onClose}
+					className="flex h-8 w-8 items-center justify-center rounded-full text-foreground/70 transition-colors hover:bg-white/60 hover:text-foreground"
+					aria-label="닫기"
+				>
+					<X className="h-5 w-5" />
+				</button>
+			</div>
+			<div className="min-h-0 flex-1 overflow-y-auto p-4">
+				{loading ? (
+					<InlineLoadingLogo
+						className="h-16 w-16"
+						paddingClassName="py-8"
+					/>
+				) : books.length === 0 ? (
+					<p className="py-8 text-center text-sm text-muted-foreground">
+						상대방이 이 도서관에 등록한 다른 교환 가능한 책이 없습니다.
+					</p>
+				) : (
+					<ul className="flex flex-col gap-2">
+						{books.map((book) => (
+							<button
+								key={book.id}
+								type="button"
+								onClick={() => setSelectedId(book.id)}
+								className={`flex items-center gap-3 rounded-xl border p-3 text-left transition-colors ${
+									selectedId === book.id
+										? "border-primary bg-primary/10"
+										: "border-primary/20 bg-white/60 hover:bg-white/80"
+								}`}
+							>
+								<div className="h-14 w-10 flex-shrink-0 overflow-hidden rounded bg-neutral-200">
+									{book.thumbnail_url ? (
+										<img
+											src={book.thumbnail_url}
+											alt={book.title}
+											className="h-full w-full object-cover"
+										/>
+									) : (
+										<div className="flex h-full w-full items-center justify-center">
+											<BookOpen className="h-6 w-6 text-neutral-400" strokeWidth={1.5} />
+										</div>
+									)}
+								</div>
+								<p className="line-clamp-2 flex-1 text-sm font-medium text-foreground">
+									{book.title}
+								</p>
+							</button>
+						))}
+					</ul>
 				)}
 			</div>
-		</div>
+			{books.length > 0 && (
+				<div className="border-t border-primary/20 p-4">
+					<button
+						type="button"
+						onClick={handleSubmit}
+						disabled={isSubmitting || !selectedId}
+						className="w-full rounded-xl bg-primary py-3 text-base font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+					>
+						{isSubmitting ? "요청 중..." : "이 책으로 교환 요청하기"}
+					</button>
+				</div>
+			)}
+		</BottomSheetModal>
 	);
 }
 
@@ -620,12 +624,15 @@ export default function ExchangeInteractiveUI({
 	const [showTimeModal, setShowTimeModal] = useState(false);
 	const [showCounterModal, setShowCounterModal] = useState(false);
 	const [showNoShowModal, setShowNoShowModal] = useState(false);
+	const [partnerProfileOpen, setPartnerProfileOpen] = useState(false);
 	const [isCompleting, setIsCompleting] = useState(false);
 	const [isReportingNoShow, setIsReportingNoShow] = useState(false);
 	const [isSendingReminder, setIsSendingReminder] = useState(false);
 
 	const myBook = isRequester ? exchange.requester_book : exchange.owner_book;
 	const targetBook = isRequester ? exchange.owner_book : exchange.requester_book;
+	const partnerId = isRequester ? exchange.owner_id : exchange.requester_id;
+	const partnerUser = isRequester ? exchange.owner_user : exchange.requester_user;
 	const isEnded = exchange.status === "REJECTED" || exchange.status === "CANCELED";
 
 	const handleCancel = async () => {
@@ -679,6 +686,35 @@ export default function ExchangeInteractiveUI({
 						)}
 					</div>
 				</Link>
+
+				<button
+					type="button"
+					onClick={() => setPartnerProfileOpen(true)}
+					className="flex w-full items-center gap-3 rounded-xl border border-primary/20 bg-white/60 px-4 py-3 text-left shadow-sm backdrop-blur-md transition-colors hover:border-primary/30 hover:bg-white/80 active:scale-[0.99]"
+				>
+					<div className="min-w-0 flex flex-1 flex-col gap-1">
+						<span className="text-xs font-medium text-muted-foreground">
+							교환 이웃
+						</span>
+						<div className="flex min-w-0 items-center gap-3">
+							{partnerUser?.profile_image ? (
+								<img
+									src={partnerUser.profile_image}
+									alt={partnerUser.nickname ?? ""}
+									className="h-10 w-10 shrink-0 rounded-full object-cover ring-2 ring-primary/15"
+								/>
+							) : (
+								<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-neutral-200 text-neutral-500">
+									<User className="h-5 w-5" strokeWidth={2} />
+								</div>
+							)}
+							<span className="min-w-0 flex-1 truncate text-base font-bold text-foreground">
+								{partnerUser?.nickname ?? "이웃"}
+							</span>
+						</div>
+					</div>
+					<ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden />
+				</button>
 
 				{/* Match-up Card */}
 				<section className="rounded-2xl border border-primary/20 bg-white/60 p-4 shadow-sm backdrop-blur-md">
@@ -1043,62 +1079,63 @@ export default function ExchangeInteractiveUI({
 				</section>
 			</main>
 
-			{showTimeModal && (
-				<TimeSelectionModal
-					exchangeId={exchange.id}
-					onClose={() => setShowTimeModal(false)}
-					onSuccess={handleProposeSuccess}
-				/>
-			)}
-			{showCounterModal && (
-				<RequestDifferentBookModal
-					exchangeId={exchange.id}
-					requesterId={exchange.requester_id}
-					libraryId={exchange.library.id}
-					currentRequesterBookId={exchange.requester_book.id}
-					onClose={() => setShowCounterModal(false)}
-					onSuccess={() => {
-						setShowCounterModal(false);
+			<TimeSelectionModal
+				open={showTimeModal}
+				exchangeId={exchange.id}
+				onClose={() => setShowTimeModal(false)}
+				onSuccess={handleProposeSuccess}
+			/>
+			<RequestDifferentBookModal
+				open={showCounterModal}
+				exchangeId={exchange.id}
+				requesterId={exchange.requester_id}
+				libraryId={exchange.library.id}
+				currentRequesterBookId={exchange.requester_book.id}
+				onClose={() => setShowCounterModal(false)}
+				onSuccess={() => {
+					setShowCounterModal(false);
+					router.refresh();
+				}}
+			/>
+			<NoShowModal
+				isOpen={showNoShowModal}
+				onClose={() => setShowNoShowModal(false)}
+				onSendReminder={async () => {
+					setIsSendingReminder(true);
+					try {
+						await sendManualReminder(exchange.id);
+						alert("상대방에게 알림을 보냈습니다.");
+						setShowNoShowModal(false);
+					} catch (err) {
+						alert(err instanceof Error ? err.message : "알림 전송 실패");
+					} finally {
+						setIsSendingReminder(false);
+					}
+				}}
+				onCancelExchange={async () => {
+					setIsReportingNoShow(true);
+					try {
+						await reportNoShow(
+							exchange.id,
+							exchange.requester_book.id,
+							exchange.owner_book.id,
+						);
+						setShowNoShowModal(false);
 						router.refresh();
-					}}
-				/>
-			)}
-			{showNoShowModal && (
-				<NoShowModal
-					isOpen={showNoShowModal}
-					onClose={() => setShowNoShowModal(false)}
-					onSendReminder={async () => {
-						setIsSendingReminder(true);
-						try {
-							await sendManualReminder(exchange.id);
-							alert("상대방에게 알림을 보냈습니다.");
-							setShowNoShowModal(false);
-						} catch (err) {
-							alert(err instanceof Error ? err.message : "알림 전송 실패");
-						} finally {
-							setIsSendingReminder(false);
-						}
-					}}
-					onCancelExchange={async () => {
-						setIsReportingNoShow(true);
-						try {
-							await reportNoShow(
-								exchange.id,
-								exchange.requester_book.id,
-								exchange.owner_book.id,
-							);
-							setShowNoShowModal(false);
-							router.refresh();
-						} catch (err) {
-							alert(err instanceof Error ? err.message : "처리 실패");
-						} finally {
-							setIsReportingNoShow(false);
-						}
-					}}
-					isReporting={isReportingNoShow}
-					isSendingReminder={isSendingReminder}
-				/>
-			)}
+					} catch (err) {
+						alert(err instanceof Error ? err.message : "처리 실패");
+					} finally {
+						setIsReportingNoShow(false);
+					}
+				}}
+				isReporting={isReportingNoShow}
+				isSendingReminder={isSendingReminder}
+			/>
+			<UserProfileModal
+				userId={partnerId}
+				isOpen={partnerProfileOpen}
+				onClose={() => setPartnerProfileOpen(false)}
+			/>
 		</>
 	);
 }

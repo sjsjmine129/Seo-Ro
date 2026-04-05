@@ -4,6 +4,12 @@ import BackButton from "@/components/BackButton";
 import BottomNav from "@/components/BottomNav";
 import ExchangeInteractiveUI from "./ExchangeInteractiveUI";
 
+type ExchangeUserSnippet = {
+	nickname: string | null;
+	profile_image: string | null;
+	bookshelf_score: number;
+};
+
 type ExchangeDetail = {
 	id: string;
 	status: string;
@@ -16,6 +22,8 @@ type ExchangeDetail = {
 	proposed_times: string[] | null;
 	requester_completed: boolean;
 	owner_completed: boolean;
+	requester_user: ExchangeUserSnippet | null;
+	owner_user: ExchangeUserSnippet | null;
 	requester_book: {
 		id: string;
 		title: string;
@@ -45,6 +53,8 @@ async function getExchangeDetail(
 		.select(
 			`
 			id, status, requester_id, owner_id, requester_book_id, owner_book_id, library_id, meet_at, proposed_times, requester_completed, owner_completed,
+			requester_user:users!requester_id(nickname, profile_image, bookshelf_score),
+			owner_user:users!owner_id(nickname, profile_image, bookshelf_score),
 			requester_book:books!requester_book_id(id, title, thumbnail_url, condition),
 			owner_book:books!owner_book_id(id, title, thumbnail_url, condition),
 			library:libraries(id, name, address)
