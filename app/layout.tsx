@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { GoogleTagManager, GoogleAnalytics } from "@next/third-parties/google";
 import { absolutePublicUrl, getPublicSiteUrl } from "@/lib/siteUrl";
+import InstallPrompt from "@/components/InstallPrompt";
 import "./globals.css";
 
 // Favicon: after changing app/icon.png or app/apple-icon.png, restart the dev server
@@ -73,6 +74,7 @@ export default function RootLayout({
         {/* Mobile-first PWA: max-width on desktop, centered, safe-area aware */}
         <div className="mx-auto min-h-screen w-full max-w-lg bg-background pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] pt-[env(safe-area-inset-top)]">
           {children}
+          <InstallPrompt />
         </div>
       </body>
     </html>

@@ -78,7 +78,7 @@ async function getInterestedLibraries(
 				: null;
 		return {
 			id: row.library_id as string,
-			name: libObj?.name ?? "Unknown",
+			name: libObj?.name ?? "이름 없음",
 		};
 	});
 }
@@ -155,7 +155,7 @@ export default async function MyPage() {
 	]);
 
 	const displayProfile = profile ?? {
-		nickname: user.email?.split("@")[0] ?? "User",
+		nickname: user.email?.split("@")[0] ?? "이용자",
 		profile_image: null,
 		bookshelf_score: 1,
 	};

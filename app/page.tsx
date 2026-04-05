@@ -7,6 +7,14 @@ import { Library } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+function toUserFacingHomeLoadError(err: unknown): string {
+	const fallback =
+		"책 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.";
+	if (!(err instanceof Error)) return fallback;
+	if (/[가-힣]/.test(err.message)) return err.message;
+	return fallback;
+}
+
 function getLibraryNameFromBook(book: { book_libraries?: unknown }): string {
 	const bl = book.book_libraries;
 	if (!bl) return "도서관";
@@ -52,7 +60,7 @@ async function getUserLibraries(
 				: null;
 		return {
 			id: row.library_id as string,
-			name: libObj?.name ?? "Unknown Library",
+			name: libObj?.name ?? "이름 없는 도서관",
 		};
 	});
 	console.log("[getUserLibraries] Final mapped libraries:", libraries);
@@ -176,10 +184,7 @@ export default async function Home({
 		}
 	} catch (err) {
 		console.error("[Home] Caught error (full object):", err);
-		errorMessage =
-			err instanceof Error
-				? err.message
-				: "Failed to load books. Please try again.";
+		errorMessage = toUserFacingHomeLoadError(err);
 	}
 
 	const selectedId = libraryId ?? "all";

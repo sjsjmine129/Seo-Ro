@@ -19,7 +19,7 @@ export default function Logo({
 		<div className={`relative shrink-0 ${className}`} {...rest}>
 			<Image
 				src="/logo.png"
-				alt="Seo-Ro Logo"
+				alt="서로 로고"
 				fill
 				sizes="(max-width: 768px) 128px, 160px"
 				className="object-contain"

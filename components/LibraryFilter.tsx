@@ -64,7 +64,7 @@ export default function LibraryFilter({
 				className="flex cursor-pointer items-center gap-1 rounded-full border border-primary/20 bg-white/70 px-6 py-2.5 text-sm font-semibold text-primary shadow-md backdrop-blur-md"
 				aria-expanded={isOpen}
 				aria-haspopup="listbox"
-				aria-label="Select library"
+				aria-label="도서관 선택"
 			>
 				{displayLabel}
 			</button>
