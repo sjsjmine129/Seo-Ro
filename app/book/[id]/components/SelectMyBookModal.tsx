@@ -158,7 +158,7 @@ export default function SelectMyBookModal({
 					</button>
 				</div>
 
-				<div className="max-h-[65vh] overflow-y-auto p-4">
+				<div className="max-h-[65vh] overflow-y-auto p-4 pb-28">
 					{step === "library" && (
 						<ul className="flex flex-col gap-1">
 							{libraries.map((lib) => (

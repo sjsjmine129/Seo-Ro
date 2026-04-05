@@ -31,7 +31,7 @@ export default function BookImageCarousel({ images, alt }: BookImageCarouselProp
 	if (safeImages.length === 0) {
 		return (
 			<div className="flex h-[250px] w-full items-center justify-center bg-white/40">
-				<span className="text-sm text-neutral-500">No image</span>
+				<span className="text-sm text-neutral-500">이미지 없음</span>
 			</div>
 		);
 	}

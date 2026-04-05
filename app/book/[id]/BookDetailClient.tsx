@@ -90,10 +90,12 @@ export default function BookDetailClient({
 					{/* Image Carousel */}
 					<div className="overflow-hidden rounded-2xl border border-primary/20 bg-white/60 shadow-sm">
 						<BookImageCarousel
-							images={[
-								book.thumbnail_url,
-								...(book.user_images ?? []),
-							].filter(Boolean) as string[]}
+							images={
+								[
+									book.thumbnail_url,
+									...(book.user_images ?? []),
+								].filter(Boolean) as string[]
+							}
 							alt={book.title}
 						/>
 					</div>
@@ -113,9 +115,15 @@ export default function BookDetailClient({
 												label={conditionLabel}
 												className={conditionColor}
 											/>
-											{CONDITION_DESCRIPTIONS[book.condition] && (
+											{CONDITION_DESCRIPTIONS[
+												book.condition
+											] && (
 												<span className="text-sm text-neutral-500">
-													{CONDITION_DESCRIPTIONS[book.condition]}
+													{
+														CONDITION_DESCRIPTIONS[
+															book.condition
+														]
+													}
 												</span>
 											)}
 										</div>
@@ -135,7 +143,9 @@ export default function BookDetailClient({
 								{book.owner?.profile_image ? (
 									<img
 										src={book.owner.profile_image}
-										alt={book.owner.nickname ?? "Owner"}
+										alt={
+											book.owner.nickname ?? "닉네임 없음"
+										}
 										className="h-10 w-10 rounded-full object-cover ring-2 ring-white/60"
 									/>
 								) : (
