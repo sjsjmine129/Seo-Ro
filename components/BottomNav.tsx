@@ -21,11 +21,11 @@ type NavItem = {
 };
 
 const NAV_ITEMS: NavItem[] = [
-	{ href: "/", label: "Home", icon: Home },
-	{ href: "/search", label: "Search", icon: Search },
-	{ href: "/shelve", label: "Shelve", icon: BookPlus, isFab: true },
-	{ href: "/notifications", label: "Notifications", icon: Bell },
-	{ href: "/mypage", label: "My Page", icon: User },
+	{ href: "/", label: "홈", icon: Home },
+	{ href: "/search", label: "검색", icon: Search },
+	{ href: "/shelve", label: "책 꽂기", icon: BookPlus, isFab: true },
+	{ href: "/notifications", label: "알림", icon: Bell },
+	{ href: "/mypage", label: "마이페이지", icon: User },
 ];
 
 export default function BottomNav() {
@@ -39,7 +39,7 @@ export default function BottomNav() {
 	return (
 		<nav
 			className="fixed bottom-0 left-0 right-0 z-50 flex h-[65px] items-end justify-center pb-[env(safe-area-inset-bottom)]"
-			aria-label="Bottom navigation"
+			aria-label="하단 탐색"
 		>
 			{/* Glassmorphism bar: bg-glass-bg backdrop-blur-md border-primary/20 */}
 			<div className="relative mx-auto flex h-16 rounded-t-2xl w-full max-w-lg items-center justify-around border-t border-primary/20 bg-glass-bg px-2 backdrop-blur-md">
@@ -84,16 +84,14 @@ export default function BottomNav() {
 								{item.href === "/notifications" && unreadCount > 0 && (
 									<span
 										className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold text-white"
-										aria-label={`${unreadCount} unread notifications`}
+										aria-label={`읽지 않은 알림 ${unreadCount}개`}
 									>
 										{unreadCount > 99 ? "99+" : unreadCount}
 									</span>
 								)}
 							</span>
 							<span className="text-[10px] font-medium">
-								{item.label === "Notifications"
-									? "Alerts"
-									: item.label}
+								{item.label}
 							</span>
 							{isActive && (
 								<span

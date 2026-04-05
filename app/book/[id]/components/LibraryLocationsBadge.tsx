@@ -86,7 +86,7 @@ export default function LibraryLocationsBadge({
 								<X className="h-5 w-5" />
 							</button>
 						</div>
-						<ul className="max-h-[60vh] overflow-y-auto p-2">
+						<ul className="max-h-[60vh] overflow-y-auto p-2 pb-28">
 							{libraries.map((lib) => (
 								<li key={lib.id}>
 									<Link
