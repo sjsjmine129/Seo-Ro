@@ -37,7 +37,6 @@ type BookDetailClientProps = {
 	conditionColor: string;
 	conditionLabel: string;
 	isOwner: boolean;
-	isAvailable: boolean;
 	activeExchangeId: string | null;
 };
 
@@ -47,7 +46,6 @@ export default function BookDetailClient({
 	conditionColor,
 	conditionLabel,
 	isOwner,
-	isAvailable,
 	activeExchangeId,
 }: BookDetailClientProps) {
 	const router = useRouter();
@@ -214,11 +212,10 @@ export default function BookDetailClient({
 					)}
 				</main>
 
-				{/* Floating Bottom Action - hidden when modals open; show only for non-owners */}
+				{/* Floating Bottom Action — owner: edit; others: exchange flow */}
 				{!isLibraryModalOpen &&
 					!isSwapModalOpen &&
-					!isOwnerProfileOpen &&
-					!isOwner && (
+					!isOwnerProfileOpen && (
 					<div
 						className="fixed left-0 right-0 z-40 px-4"
 						style={{
@@ -226,7 +223,20 @@ export default function BookDetailClient({
 						}}
 					>
 						<div className="mx-auto max-w-lg">
-							{inActiveExchange ? (
+							{isOwner ? (
+								book.status === "AVAILABLE" ? (
+									<Link
+										href={`/book/${book.id}/edit`}
+										className="block w-full rounded-xl bg-primary py-4 text-center text-base font-semibold text-white shadow-lg transition-all hover:opacity-90 active:scale-[0.99]"
+									>
+										등록 내용 수정하기
+									</Link>
+								) : (
+									<p className="rounded-xl border border-primary/20 bg-white/70 py-4 text-center text-sm text-muted-foreground backdrop-blur-md">
+										교환 중인 책은 수정할 수 없어요
+									</p>
+								)
+							) : inActiveExchange ? (
 								<Link
 									href={`/exchange/${activeExchangeId}`}
 									className="block w-full rounded-xl bg-primary py-4 text-center text-base font-semibold text-white shadow-lg transition-all hover:opacity-90 active:scale-[0.99]"

@@ -96,7 +96,6 @@ export default async function BookDetailPage({
 		CONDITION_COLORS[book.condition] ?? CONDITION_COLORS.B;
 	const conditionLabel =
 		CONDITION_LABELS[book.condition] ?? book.condition + "급";
-	const isAvailable = book.status === "AVAILABLE";
 	const isOwner = user.id === book.owner_id;
 
 	const activeExchange = await getActiveExchangeForBook(book.id, user.id);
@@ -109,7 +108,6 @@ export default async function BookDetailPage({
 				conditionColor={conditionColor}
 				conditionLabel={conditionLabel}
 				isOwner={isOwner}
-				isAvailable={isAvailable}
 				activeExchangeId={activeExchange?.id ?? null}
 			/>
 			<RecommendedBooks currentBook={book} />
