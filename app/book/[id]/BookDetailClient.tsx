@@ -103,9 +103,9 @@ export default function BookDetailClient({
 
 					{/* Book Header: Title + Author/Publisher | User Profile */}
 					<section>
-						<div className="flex justify-between items-start gap-4">
-							{/* Left: Title + Badge, then Author/Publisher */}
-							<div className="min-w-0 flex-1 flex flex-col">
+						<div className="flex items-start justify-between gap-3 sm:gap-4">
+							{/* Left: Title + Badge, then Author/Publisher (takes remaining width) */}
+							<div className="min-w-0 flex-1 flex flex-col pr-1">
 								<div className="flex flex-col gap-1">
 									<div className="flex items-center gap-2 flex-wrap">
 										<h1 className="text-xl font-bold text-foreground">
@@ -139,12 +139,12 @@ export default function BookDetailClient({
 									)}
 								</div>
 							</div>
-							{/* Right: Owner Profile - tappable card */}
-							<div className="flex w-[min(100%,11rem)] flex-shrink-0 flex-col gap-1.5 rounded-2xl border border-primary/20 bg-white/60 p-2 shadow-sm">
+							{/* Right: profile card — width fits content; score stays one line */}
+							<div className="ml-auto w-fit shrink-0 flex flex-col gap-2 rounded-xl border border-primary/20 bg-white/60 shadow-sm backdrop-blur-md">
 								<button
 									type="button"
 									onClick={() => setIsOwnerProfileOpen(true)}
-									className="flex w-full items-center gap-2.5 rounded-xl p-1 text-left transition-colors hover:bg-white/70 active:scale-[0.99]"
+									className="flex items-center gap-3 rounded-xl px-4 py-2 text-left transition-colors hover:bg-white/70 active:scale-[0.99]"
 								>
 									{book.owner?.profile_image ? (
 										<img
@@ -163,12 +163,12 @@ export default function BookDetailClient({
 											/>
 										</div>
 									)}
-									<div className="min-w-0 flex-1">
-										<p className="truncate text-sm font-medium text-foreground">
+									<div className="flex flex-col gap-0.5">
+										<p className="text-sm font-medium text-foreground">
 											{book.owner?.nickname ?? "알 수 없음"}
 										</p>
 										{!isOwner && (
-											<span className="mt-0.5 inline-block shrink-0 whitespace-nowrap rounded-md bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">
+											<span className="mt-0.5 shrink-0 whitespace-nowrap rounded-md bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">
 												책장 점수{" "}
 												{book.owner?.bookshelf_score ??
 													0}
@@ -182,7 +182,7 @@ export default function BookDetailClient({
 										type="button"
 										onClick={handleDelete}
 										disabled={book.status !== "AVAILABLE"}
-										className={`flex w-full items-center justify-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium transition-colors ${
+										className={`flex w-full items-center justify-center gap-1 rounded-lg px-4 py-2 text-xs font-medium transition-colors ${
 											book.status === "AVAILABLE"
 												? "text-red-600 hover:bg-red-50"
 												: "cursor-not-allowed bg-neutral-200/80 text-neutral-400"

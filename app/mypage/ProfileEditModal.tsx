@@ -2,8 +2,15 @@
 
 import { useState, useRef, useEffect } from "react";
 import { X } from "lucide-react";
+import imageCompression from "browser-image-compression";
 import AnimatedLogo from "@/components/AnimatedLogo";
 import { updateUserProfile } from "./actions";
+
+const AVATAR_COMPRESSION = {
+	maxSizeMB: 0.8,
+	maxWidthOrHeight: 1024,
+	useWebWorker: true,
+} as const;
 
 type Props = {
 	isOpen: boolean;
@@ -53,11 +60,37 @@ export default function ProfileEditModal({
 		setError(null);
 		setIsSubmitting(true);
 		try {
-			await updateUserProfile(nickname.trim(), file);
+			let fileToUpload: File | null = file;
+			if (file) {
+				try {
+					const compressed = await imageCompression(
+						file,
+						AVATAR_COMPRESSION,
+					);
+					const ext = file.name.split(".").pop() || "jpg";
+					fileToUpload = new File([compressed], `avatar.${ext}`, {
+						type: compressed.type || "image/jpeg",
+						lastModified: Date.now(),
+					});
+				} catch (compressErr) {
+					const msg =
+						compressErr instanceof Error
+							? compressErr.message
+							: "이미지를 줄이는 데 실패했습니다.";
+					setError(msg);
+					alert(msg);
+					return;
+				}
+			}
+
+			await updateUserProfile(nickname.trim(), fileToUpload);
 			onSuccess();
 			onClose();
 		} catch (err) {
-			setError(err instanceof Error ? err.message : "저장 실패");
+			const msg =
+				err instanceof Error ? err.message : "저장에 실패했습니다.";
+			setError(msg);
+			alert(msg);
 		} finally {
 			setIsSubmitting(false);
 		}
@@ -144,20 +177,28 @@ export default function ProfileEditModal({
 					<div className="flex gap-2">
 						<button
 							type="button"
+							disabled={isSubmitting}
 							onClick={onClose}
-							className="flex-1 rounded-xl border border-white/60 bg-white/40 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-white/60"
+							className="flex-1 rounded-xl border border-white/60 bg-white/40 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-white/60 disabled:cursor-not-allowed disabled:opacity-50"
 						>
 							취소
 						</button>
 						<button
 							type="submit"
 							disabled={isSubmitting}
-							className="flex-1 rounded-xl bg-primary py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+							className="flex flex-1 flex-col items-center justify-center gap-1 rounded-xl bg-primary py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
 						>
 							{isSubmitting ? (
-								<span className="flex items-center justify-center">
-									<AnimatedLogo className="h-10 w-10" />
-								</span>
+								<>
+									<span className="flex items-center justify-center">
+										<AnimatedLogo className="h-10 w-10" />
+									</span>
+									<span className="text-[10px] font-normal opacity-90">
+										{file
+											? "사진 처리 및 저장 중..."
+											: "저장 중..."}
+									</span>
+								</>
 							) : (
 								"저장"
 							)}
