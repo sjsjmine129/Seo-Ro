@@ -1,8 +1,8 @@
 import { createClient } from "@/utils/supabase/server";
 import BottomNav from "@/components/BottomNav";
+import HomePullToRefresh from "@/components/HomePullToRefresh";
 import LibraryFilter from "@/components/LibraryFilter";
 import BookCard from "@/components/BookCard";
-import Logo from "@/components/Logo";
 import { Library } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -193,6 +193,7 @@ export default async function Home({
 
 	return (
 		<>
+			<HomePullToRefresh>
 			<main className="flex min-h-screen flex-col px-4 pb-32 pt-4">
 				<LibraryFilter
 					libraries={libraries}
@@ -270,6 +271,7 @@ export default async function Home({
 					</div>
 				)}
 			</main>
+			</HomePullToRefresh>
 			<BottomNav />
 		</>
 	);
