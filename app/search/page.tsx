@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
@@ -8,6 +9,8 @@ import InlineLoadingLogo from "@/components/InlineLoadingLogo";
 import BookCard from "@/components/BookCard";
 import { createClient } from "@/utils/supabase/client";
 import BottomNav from "@/components/BottomNav";
+import { fetchSearchFallbackBooks } from "@/lib/searchFallbackBooks";
+import type { SearchFallbackBook } from "@/lib/searchFallbackBooks";
 
 const PAGE_SIZE = 15;
 const LOCATION_FETCH_LIMIT = 500;
@@ -95,6 +98,9 @@ export default function SearchPage() {
 	} | null>(null);
 	const [libraryResults, setLibraryResults] = useState<LibraryItem[]>([]);
 	const [bookResults, setBookResults] = useState<BookResult[]>([]);
+	const [alternativeBooks, setAlternativeBooks] = useState<
+		SearchFallbackBook[]
+	>([]);
 	const [page, setPage] = useState(0);
 	const [hasMore, setHasMore] = useState(false);
 	const [isLoading, setIsLoading] = useState(false);
@@ -202,6 +208,7 @@ export default function SearchPage() {
 	const fetchBooksFromSupabase = useCallback(
 		async (q: string) => {
 			setIsLoading(true);
+			setAlternativeBooks([]);
 			try {
 				const trimmed = q.trim().toLowerCase();
 				if (!trimmed) {
@@ -277,9 +284,18 @@ export default function SearchPage() {
 					...(hasAvailable ? [] : fallback),
 				];
 				setBookResults(sorted);
+
+				if (sorted.length === 0) {
+					const fallbackBooks =
+						await fetchSearchFallbackBooks(supabase);
+					setAlternativeBooks(fallbackBooks);
+				} else {
+					setAlternativeBooks([]);
+				}
 			} catch (err) {
 				console.error("fetchBooks error:", err);
 				setBookResults([]);
+				setAlternativeBooks([]);
 			} finally {
 				setIsLoading(false);
 			}
@@ -305,6 +321,7 @@ export default function SearchPage() {
 			bookSearchTimeoutRef.current = null;
 		}
 		setBookResults([]);
+		setAlternativeBooks([]);
 		return () => {
 			if (bookSearchTimeoutRef.current) {
 				clearTimeout(bookSearchTimeoutRef.current);
@@ -320,6 +337,7 @@ export default function SearchPage() {
 		const q = searchText.trim();
 		if (!q) {
 			setBookResults([]);
+			setAlternativeBooks([]);
 			return;
 		}
 		bookSearchTimeoutRef.current = setTimeout(() => {
@@ -518,15 +536,57 @@ export default function SearchPage() {
 					</div>
 				)}
 
-				{/* Book empty */}
+				{/* Book empty + alternative recommendations */}
 				{bookResultsEmpty && (
-					<div className="flex flex-1 flex-col items-center justify-center gap-2 py-12 text-center">
-						<p className="text-foreground/70">
-							검색 결과가 없습니다.
-						</p>
-						<p className="text-sm text-foreground/50">
-							다른 키워드로 검색해 보세요.
-						</p>
+					<div className="flex w-full flex-col pb-6">
+						<div className="py-10 text-center text-gray-500">
+							검색하신 책이 아직 근처 도서관에 없어요. 😢
+						</div>
+						{alternativeBooks.length > 0 && (
+							<section
+								className="w-full"
+								aria-labelledby="search-fallback-books-heading"
+							>
+								<h3
+									id="search-fallback-books-heading"
+									className="mb-4 mt-8 px-4 text-lg font-bold text-foreground"
+								>
+									대신 이런 책은 어때요?
+								</h3>
+								<div className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-4 pb-4 [-webkit-overflow-scrolling:touch] hide-scrollbar">
+									{alternativeBooks.map((b) => (
+										<Link
+											key={b.id}
+											href={`/book/${b.id}`}
+											className="w-[7.25rem] shrink-0 snap-start"
+										>
+											<div className="aspect-[2/3] w-full overflow-hidden rounded-xl border border-primary/20 bg-neutral-200 shadow-sm">
+												{b.thumbnail_url ? (
+													<img
+														src={b.thumbnail_url}
+														alt={b.title}
+														className="h-full w-full object-cover"
+													/>
+												) : (
+													<div className="flex h-full w-full items-center justify-center bg-white/60">
+														<BookOpen
+															className="h-8 w-8 text-neutral-400"
+															strokeWidth={1.5}
+														/>
+													</div>
+												)}
+											</div>
+											<p className="mt-2 line-clamp-2 text-xs font-medium leading-snug text-foreground">
+												{b.title}
+											</p>
+											<p className="mt-0.5 line-clamp-1 text-[10px] text-muted-foreground">
+												{b.libraryName}
+											</p>
+										</Link>
+									))}
+								</div>
+							</section>
+						)}
 					</div>
 				)}
 
