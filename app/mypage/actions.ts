@@ -7,10 +7,15 @@ import { revalidatePath } from "next/cache";
 const AVATARS_BUCKET = "avatars";
 const MAX_AVATAR_SIZE_MB = 2;
 
+export type UpdateUserProfileResult = {
+	nickname: string;
+	profileImageUrl: string | null;
+};
+
 export async function updateUserProfile(
 	nickname: string,
 	profileImageFile: File | null,
-) {
+): Promise<UpdateUserProfileResult> {
 	const supabase = await createClient();
 	const {
 		data: { user },
@@ -67,5 +72,23 @@ export async function updateUserProfile(
 		throw new Error(`프로필 업데이트 실패: ${error.message}`);
 	}
 
+	const { data: fresh, error: freshErr } = await supabase
+		.from("users")
+		.select("nickname, profile_image")
+		.eq("id", user.id)
+		.single();
+
 	revalidatePath("/mypage");
+
+	if (freshErr || !fresh) {
+		return {
+			nickname: trimmedNickname,
+			profileImageUrl: profileImageUrl,
+		};
+	}
+
+	return {
+		nickname: fresh.nickname ?? trimmedNickname,
+		profileImageUrl: fresh.profile_image ?? null,
+	};
 }

@@ -4,7 +4,10 @@ import { useState, useRef, useEffect } from "react";
 import { X } from "lucide-react";
 import imageCompression from "browser-image-compression";
 import AnimatedLogo from "@/components/AnimatedLogo";
-import { updateUserProfile } from "./actions";
+import {
+	updateUserProfile,
+	type UpdateUserProfileResult,
+} from "./actions";
 
 const AVATAR_COMPRESSION = {
 	maxSizeMB: 0.8,
@@ -17,7 +20,7 @@ type Props = {
 	onClose: () => void;
 	initialNickname: string;
 	initialProfileImage: string | null;
-	onSuccess: () => void;
+	onSuccess: (result: UpdateUserProfileResult) => void;
 };
 
 export default function ProfileEditModal({
@@ -83,8 +86,11 @@ export default function ProfileEditModal({
 				}
 			}
 
-			await updateUserProfile(nickname.trim(), fileToUpload);
-			onSuccess();
+			const result = await updateUserProfile(
+				nickname.trim(),
+				fileToUpload,
+			);
+			onSuccess(result);
 			onClose();
 		} catch (err) {
 			const msg =
