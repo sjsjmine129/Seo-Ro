@@ -19,10 +19,12 @@ export default function NotificationsClient() {
 	const [loading, setLoading] = useState(true);
 
 	useEffect(() => {
-		getNotifications().then((data) => {
+		void (async () => {
+			await markAllAsRead();
+			const data = await getNotifications();
 			setNotifications(data);
 			setLoading(false);
-		});
+		})();
 	}, []);
 
 	const handleMarkAllRead = async () => {
