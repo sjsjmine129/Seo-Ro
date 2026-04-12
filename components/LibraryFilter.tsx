@@ -54,10 +54,7 @@ export default function LibraryFilter({
 	};
 
 	return (
-		<div
-			ref={containerRef}
-			className="sticky top-4 z-40 mb-6 px-1 flex flex-col items-start"
-		>
+		<div ref={containerRef} className="flex w-full flex-col items-start">
 			<button
 				type="button"
 				onClick={() => setIsOpen((prev) => !prev)}

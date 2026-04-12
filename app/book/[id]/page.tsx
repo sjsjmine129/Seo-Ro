@@ -108,7 +108,7 @@ export default async function BookDetailPage({
 				conditionColor={conditionColor}
 				conditionLabel={conditionLabel}
 				isOwner={isOwner}
-				activeExchangeId={activeExchange?.id ?? null}
+				hasActiveExchange={!!activeExchange}
 			/>
 			<RecommendedBooks currentBook={book} />
 			<BottomNav />

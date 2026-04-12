@@ -3,17 +3,22 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { User, Quote, Trash2 } from "lucide-react";
+import { BookOpen, Loader2, User, Quote, Trash2 } from "lucide-react";
 import BackButton from "@/components/BackButton";
 import BookImageCarousel from "@/components/BookImageCarousel";
+import BottomSheetModal from "@/components/BottomSheetModal";
 import ConditionBadgeWithTooltip, {
 	CONDITION_DESCRIPTIONS,
 } from "@/components/ConditionBadgeWithTooltip";
 import LibraryLocationsBadge from "./components/LibraryLocationsBadge";
 import type { LibraryItem } from "./components/LibraryLocationsBadge";
-import SelectMyBookModal from "./components/SelectMyBookModal";
 import UserProfileModal from "@/components/UserProfileModal";
-import { deleteBook } from "./actions";
+import {
+	createOrGetChatRoom,
+	deleteBook,
+	getMyOfferBooksForListing,
+} from "./actions";
+import type { ChatBookPreview } from "@/lib/types/chat";
 
 type BookDetailClientProps = {
 	book: {
@@ -37,7 +42,7 @@ type BookDetailClientProps = {
 	conditionColor: string;
 	conditionLabel: string;
 	isOwner: boolean;
-	activeExchangeId: string | null;
+	hasActiveExchange: boolean;
 };
 
 export default function BookDetailClient({
@@ -46,17 +51,88 @@ export default function BookDetailClient({
 	conditionColor,
 	conditionLabel,
 	isOwner,
-	activeExchangeId,
+	hasActiveExchange,
 }: BookDetailClientProps) {
 	const router = useRouter();
 	const [isLibraryModalOpen, setIsLibraryModalOpen] = useState(false);
-	const [isSwapModalOpen, setIsSwapModalOpen] = useState(false);
 	const [isOwnerProfileOpen, setIsOwnerProfileOpen] = useState(false);
+	const [isCreatingChat, setIsCreatingChat] = useState(false);
+	const [selectOfferOpen, setSelectOfferOpen] = useState(false);
+	const [offerCandidates, setOfferCandidates] = useState<ChatBookPreview[]>(
+		[],
+	);
+	const [loadingOffers, setLoadingOffers] = useState(false);
+	const [offerLoadError, setOfferLoadError] = useState<string | null>(null);
 
-	const inActiveExchange = !!activeExchangeId;
-	const isSwappingWithOther = book.status === "SWAPPING" && !inActiveExchange;
-	const canRequestSwap =
-		!isOwner && book.status === "AVAILABLE" && libraries.length > 0;
+	const isSwappingWithOther =
+		book.status === "SWAPPING" && !hasActiveExchange;
+	const canOpenChat =
+		!isOwner &&
+		libraries.length > 0 &&
+		!isSwappingWithOther &&
+		(book.status === "AVAILABLE" || hasActiveExchange);
+
+	const registerBookHref =
+		libraries[0]?.id != null
+			? `/book/new?libraryId=${encodeURIComponent(libraries[0].id)}`
+			: "/book/new";
+
+	const openSelectOfferSheet = () => {
+		setSelectOfferOpen(true);
+		setOfferLoadError(null);
+		setLoadingOffers(true);
+		void (async () => {
+			try {
+				const list = await getMyOfferBooksForListing(book.id);
+				setOfferCandidates(list);
+			} catch (e) {
+				setOfferCandidates([]);
+				setOfferLoadError(
+					e instanceof Error
+						? e.message
+						: "목록을 불러오지 못했습니다.",
+				);
+			} finally {
+				setLoadingOffers(false);
+			}
+		})();
+	};
+
+	const handleResumeChat = async () => {
+		if (isCreatingChat || !canOpenChat) return;
+		setIsCreatingChat(true);
+		try {
+			const roomId = await createOrGetChatRoom(book.id, book.owner_id);
+			router.push(`/chat/${roomId}`);
+		} catch (err) {
+			alert(
+				err instanceof Error ? err.message : "채팅방을 열지 못했습니다.",
+			);
+		} finally {
+			setIsCreatingChat(false);
+		}
+	};
+
+	const handleConfirmOfferBook = async (offerBookId: string) => {
+		if (isCreatingChat) return;
+		setIsCreatingChat(true);
+		setOfferLoadError(null);
+		try {
+			const roomId = await createOrGetChatRoom(
+				book.id,
+				book.owner_id,
+				offerBookId,
+			);
+			setSelectOfferOpen(false);
+			router.push(`/chat/${roomId}`);
+		} catch (err) {
+			alert(
+				err instanceof Error ? err.message : "채팅방을 열지 못했습니다.",
+			);
+		} finally {
+			setIsCreatingChat(false);
+		}
+	};
 
 	const handleDelete = async () => {
 		if (book.status !== "AVAILABLE") return;
@@ -214,8 +290,8 @@ export default function BookDetailClient({
 
 				{/* Floating Bottom Action — owner: edit; others: exchange flow */}
 				{!isLibraryModalOpen &&
-					!isSwapModalOpen &&
-					!isOwnerProfileOpen && (
+					!isOwnerProfileOpen &&
+					!selectOfferOpen && (
 					<div
 						className="fixed left-0 right-0 z-40 px-4"
 						style={{
@@ -236,13 +312,6 @@ export default function BookDetailClient({
 										교환 중인 책은 수정할 수 없어요
 									</p>
 								)
-							) : inActiveExchange ? (
-								<Link
-									href={`/exchange/${activeExchangeId}`}
-									className="block w-full rounded-xl bg-primary py-4 text-center text-base font-semibold text-white shadow-lg transition-all hover:opacity-90 active:scale-[0.99]"
-								>
-									교환 화면으로 이동
-								</Link>
 							) : isSwappingWithOther ? (
 								<button
 									type="button"
@@ -251,30 +320,133 @@ export default function BookDetailClient({
 								>
 									교환 진행 중인 책입니다
 								</button>
-							) : canRequestSwap ? (
+							) : canOpenChat ? (
 								<button
 									type="button"
-									onClick={() => setIsSwapModalOpen(true)}
-									className="w-full rounded-xl bg-primary py-4 text-base font-semibold text-white shadow-lg transition-all hover:opacity-90 active:scale-[0.99]"
+									disabled={isCreatingChat}
+									onClick={() =>
+										void (hasActiveExchange
+											? handleResumeChat()
+											: openSelectOfferSheet())
+									}
+									className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-4 text-base font-semibold text-white shadow-lg transition-all hover:opacity-90 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-70"
 								>
-									바꿔읽기
+									{isCreatingChat ? (
+										<>
+											<Loader2
+												className="h-5 w-5 animate-spin"
+												aria-hidden
+											/>
+											연결 중…
+										</>
+									) : hasActiveExchange ? (
+										"채팅으로 이어가기"
+									) : (
+										"바꿔읽기"
+									)}
 								</button>
 							) : null}
 						</div>
 					</div>
 				)}
 
-				<SelectMyBookModal
-					isOpen={isSwapModalOpen}
-					onClose={() => setIsSwapModalOpen(false)}
-					ownerBookId={book.id}
-					libraries={libraries}
-				/>
 				<UserProfileModal
 					userId={book.owner_id}
 					isOpen={isOwnerProfileOpen}
 					onClose={() => setIsOwnerProfileOpen(false)}
 				/>
+
+				<BottomSheetModal
+					open={selectOfferOpen}
+					onClose={() => setSelectOfferOpen(false)}
+					className="pointer-events-auto max-h-[min(75vh,560px)] w-full max-w-lg overflow-hidden rounded-2xl border border-primary/15 bg-glass-bg shadow-xl"
+				>
+					<div className="flex max-h-[min(75vh,560px)] flex-col p-4">
+						<div className="flex items-start justify-between gap-2">
+							<div className="min-w-0">
+								<p className="text-sm font-semibold text-foreground">
+									바꿔읽기로 줄 책 선택
+								</p>
+								<p className="mt-1 text-xs text-muted-foreground">
+									이 책이 등록된 도서관과 같은 허브에 올린 내 책만
+									선택할 수 있어요.
+								</p>
+							</div>
+							<Link
+								href={registerBookHref}
+								onClick={() => setSelectOfferOpen(false)}
+								className="shrink-0 rounded-lg border border-primary/25 bg-primary/10 px-2.5 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/15"
+							>
+								새 책 등록
+							</Link>
+						</div>
+						{offerLoadError ? (
+							<p className="mt-3 rounded-lg bg-destructive/10 px-3 py-2 text-center text-xs text-destructive">
+								{offerLoadError}
+							</p>
+						) : null}
+						<div className="mt-3 flex-1 overflow-y-auto">
+							{loadingOffers ? (
+								<p className="py-10 text-center text-sm text-muted-foreground">
+									불러오는 중…
+								</p>
+							) : offerCandidates.length === 0 ? (
+								<div className="flex flex-col items-center gap-4 py-10 text-center">
+									<p className="max-w-[260px] text-sm text-muted-foreground">
+										조건에 맞는 내 책이 없어요. 같은 도서관에 책을
+										등록한 뒤 다시 시도해 주세요.
+									</p>
+									<Link
+										href={registerBookHref}
+										onClick={() => setSelectOfferOpen(false)}
+										className="rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+									>
+										책 등록하기
+									</Link>
+								</div>
+							) : (
+								<ul className="flex flex-col gap-2">
+									{offerCandidates.map((b) => (
+										<li key={b.id}>
+											<button
+												type="button"
+												disabled={isCreatingChat}
+												className="flex w-full items-center gap-3 rounded-xl border border-primary/15 bg-white/80 px-3 py-2 text-left text-sm transition-colors hover:bg-white disabled:opacity-50"
+												onClick={() =>
+													void handleConfirmOfferBook(b.id)
+												}
+											>
+												<div className="h-12 w-9 shrink-0 overflow-hidden rounded bg-neutral-200">
+													{b.thumbnail_url ? (
+														<img
+															src={b.thumbnail_url}
+															alt=""
+															className="h-full w-full object-cover"
+														/>
+													) : (
+														<div className="flex h-full w-full items-center justify-center">
+															<BookOpen className="h-4 w-4 text-neutral-400" />
+														</div>
+													)}
+												</div>
+												<span className="line-clamp-2 font-medium text-foreground">
+													{b.title}
+												</span>
+											</button>
+										</li>
+									))}
+								</ul>
+							)}
+						</div>
+						<button
+							type="button"
+							className="mt-3 w-full rounded-xl py-2 text-sm text-muted-foreground"
+							onClick={() => setSelectOfferOpen(false)}
+						>
+							닫기
+						</button>
+					</div>
+				</BottomSheetModal>
 			</div>
 		</>
 	);
