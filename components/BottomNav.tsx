@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import {
 	Home,
 	Search,
@@ -10,6 +11,7 @@ import {
 	User,
 	type LucideIcon,
 } from "lucide-react";
+import { getUnreadSummary } from "@/app/actions/unreadSummary";
 
 type NavItem = {
 	href: string;
@@ -28,6 +30,27 @@ const NAV_ITEMS: NavItem[] = [
 
 export default function BottomNav() {
 	const pathname = usePathname();
+	const [chatUnread, setChatUnread] = useState(false);
+
+	useEffect(() => {
+		let alive = true;
+		const load = () => {
+			void getUnreadSummary().then((s) => {
+				if (alive) setChatUnread(s.chatUnread);
+			});
+		};
+		load();
+		const id = window.setInterval(load, 18000);
+		const onVis = () => {
+			if (document.visibilityState === "visible") load();
+		};
+		document.addEventListener("visibilitychange", onVis);
+		return () => {
+			alive = false;
+			window.clearInterval(id);
+			document.removeEventListener("visibilitychange", onVis);
+		};
+	}, [pathname]);
 
 	return (
 		<nav
@@ -62,6 +85,7 @@ export default function BottomNav() {
 							? pathname === "/chat" || pathname.startsWith("/chat/")
 							: pathname === item.href;
 					const Icon = item.icon;
+					const showChatDot = item.href === "/chat" && chatUnread;
 
 					return (
 						<Link
@@ -71,12 +95,18 @@ export default function BottomNav() {
 							aria-label={item.label}
 							aria-current={isActive ? "page" : undefined}
 						>
-							<span className="relative">
+							<span className="relative inline-flex">
 								<Icon
 									className="h-6 w-6"
 									strokeWidth={2}
 									aria-hidden
 								/>
+								{showChatDot ? (
+									<span
+										className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full border-2 border-background bg-red-500"
+										aria-hidden
+									/>
+								) : null}
 							</span>
 							<span className="text-[10px] font-medium">
 								{item.label}

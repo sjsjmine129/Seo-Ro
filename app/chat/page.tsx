@@ -36,11 +36,21 @@ function ChatListRow({ item }: { item: ChatListItem }) {
 	return (
 		<Link
 			href={`/chat/${item.roomId}`}
-			className="flex items-center gap-3 border-b border-primary/10 py-3 pr-1 transition-colors hover:bg-white/40"
+			className={`flex items-center gap-3 border-b border-primary/10 py-3 pr-1 transition-colors hover:bg-white/40 ${item.hasUnread ? "bg-primary/[0.06]" : ""}`}
 		>
-			<Avatar item={item.otherUser} />
+			<span className="relative shrink-0">
+				<Avatar item={item.otherUser} />
+				{item.hasUnread ? (
+					<span
+						className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-background bg-red-500"
+						aria-hidden
+					/>
+				) : null}
+			</span>
 			<div className="min-w-0 flex-1">
-				<p className="truncate font-bold text-foreground">
+				<p
+					className={`truncate text-foreground ${item.hasUnread ? "font-extrabold" : "font-bold"}`}
+				>
 					{item.otherUser.nickname ?? "이웃"}
 				</p>
 				<p className="truncate text-sm text-gray-500">{item.preview}</p>

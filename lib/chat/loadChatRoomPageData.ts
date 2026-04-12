@@ -17,6 +17,7 @@ type RoomQueryRow = {
 	receiver_id: string;
 	left_by_user_ids?: string[] | null;
 	initiator_offer_book_id: string | null;
+	appointment_at?: string | null;
 	post_book: {
 		id: string;
 		title: string;
@@ -42,6 +43,7 @@ type RoomQueryRow = {
 export type ChatRoomPagePayload = {
 	roomId: string;
 	status: ChatRoomStatus;
+	appointmentAt: string | null;
 	leftByUserIds: string[];
 	postBook: ChatBookPreview;
 	offerBook: ChatBookPreview | null;
@@ -89,6 +91,7 @@ export async function loadChatRoomPageData(
 			receiver_id,
 			left_by_user_ids,
 			initiator_offer_book_id,
+			appointment_at,
 			post_book:books!post_book_id(id, title, thumbnail_url),
 			offer_book:books!initiator_offer_book_id(id, title, thumbnail_url),
 			initiator:users!initiator_id(id, nickname, profile_image),
@@ -153,6 +156,7 @@ export async function loadChatRoomPageData(
 	return {
 		roomId: r.id,
 		status: r.status,
+		appointmentAt: r.appointment_at ?? null,
 		leftByUserIds: r.left_by_user_ids ?? [],
 		postBook: toBookPreview(r.post_book, r.post_book_id),
 		offerBook: r.offer_book

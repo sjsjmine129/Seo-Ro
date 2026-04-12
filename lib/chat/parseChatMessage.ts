@@ -13,14 +13,34 @@ function parseBookChangePayload(content: string): SystemBookChangePayload | null
 	try {
 		const parsed: unknown = JSON.parse(content);
 		if (!isRecord(parsed) || parsed.kind !== "SYSTEM_BOOK_CHANGE") return null;
+		const summary =
+			typeof parsed.summary === "string" ? parsed.summary : undefined;
+		if (parsed.changeTarget === "POST_BOOK") {
+			const newPost =
+				typeof parsed.newPostBookId === "string"
+					? parsed.newPostBookId
+					: null;
+			if (!newPost) return null;
+			const prevPost = parsed.previousPostBookId;
+			return {
+				kind: "SYSTEM_BOOK_CHANGE",
+				changeTarget: "POST_BOOK",
+				previousOfferBookId: null,
+				newOfferBookId: newPost,
+				previousPostBookId:
+					typeof prevPost === "string" ? prevPost : null,
+				newPostBookId: newPost,
+				summary,
+			};
+		}
 		if (typeof parsed.newOfferBookId !== "string") return null;
 		const prev = parsed.previousOfferBookId;
 		return {
 			kind: "SYSTEM_BOOK_CHANGE",
+			changeTarget: "OFFER_BOOK",
 			previousOfferBookId: typeof prev === "string" ? prev : null,
 			newOfferBookId: parsed.newOfferBookId,
-			summary:
-				typeof parsed.summary === "string" ? parsed.summary : undefined,
+			summary,
 		};
 	} catch {
 		return null;

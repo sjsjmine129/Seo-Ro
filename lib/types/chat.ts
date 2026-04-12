@@ -27,6 +27,8 @@ export interface ChatRoomRow {
 	receiver_id: string;
 	initiator_offer_book_id: string | null;
 	status: ChatRoomStatus;
+	/** Set when a proposed appointment is accepted (ISO timestamptz). */
+	appointment_at?: string | null;
 	/** Users who hid this room from their list (soft leave). */
 	left_by_user_ids?: string[];
 	created_at: string;
@@ -38,16 +40,22 @@ export interface ChatMessageRow {
 	id: string;
 	room_id: string;
 	sender_id: string;
+	/** [initiator_id, receiver_id] — denormalized for RLS / Realtime. */
+	participant_ids?: string[];
 	message_type: ChatMessageType;
 	content: string;
 	created_at: string;
 }
 
-/** Example payload stored as JSON string in `content` for SYSTEM_BOOK_CHANGE */
+/** Stored in `content` for SYSTEM_BOOK_CHANGE */
 export interface SystemBookChangePayload {
 	kind: "SYSTEM_BOOK_CHANGE";
+	/** Which side of the swap changed (default: initiator's offer book). */
+	changeTarget?: "OFFER_BOOK" | "POST_BOOK";
 	previousOfferBookId: string | null;
 	newOfferBookId: string;
+	previousPostBookId?: string | null;
+	newPostBookId?: string;
 	summary?: string;
 }
 

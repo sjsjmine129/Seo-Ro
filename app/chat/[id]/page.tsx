@@ -39,6 +39,7 @@ export default async function ChatRoomPage({
 			initialMessages={initialMessages}
 			initialRoomStatus={bundle.status}
 			initialLeftByUserIds={bundle.leftByUserIds}
+			initialAppointmentAt={bundle.appointmentAt}
 		/>
 	);
 }

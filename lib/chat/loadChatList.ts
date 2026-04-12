@@ -15,6 +15,8 @@ export type ChatListItem = {
 	preview: string;
 	/** ISO timestamp for sorting / relative label (latest message or room activity) */
 	sortTime: string;
+	/** True when the latest message is from the other user and newer than last_read_at */
+	hasUnread: boolean;
 };
 
 type RoomRow = {
@@ -31,6 +33,7 @@ type RoomRow = {
 
 type LatestMsg = {
 	room_id: string;
+	sender_id: string;
 	message_type: string;
 	content: string;
 	created_at: string;
@@ -83,7 +86,7 @@ async function fetchLatestMessagePerRoom(
 		roomIds.map(async (roomId) => {
 			const { data } = await supabase
 				.from("messages")
-				.select("room_id, message_type, content, created_at")
+				.select("room_id, sender_id, message_type, content, created_at")
 				.eq("room_id", roomId)
 				.order("created_at", { ascending: false })
 				.limit(1)
@@ -94,6 +97,29 @@ async function fetchLatestMessagePerRoom(
 
 	for (const row of rows) {
 		if (row?.room_id) map.set(row.room_id, row);
+	}
+	return map;
+}
+
+async function fetchLastReadMap(
+	supabase: SupabaseServer,
+	userId: string,
+	roomIds: string[],
+): Promise<Map<string, string>> {
+	const map = new Map<string, string>();
+	if (roomIds.length === 0) return map;
+
+	const { data, error } = await supabase
+		.from("chat_room_reads")
+		.select("room_id, last_read_at")
+		.eq("user_id", userId)
+		.in("room_id", roomIds);
+
+	if (error) return map;
+	for (const row of data ?? []) {
+		if (row.room_id && row.last_read_at) {
+			map.set(row.room_id, row.last_read_at as string);
+		}
 	}
 	return map;
 }
@@ -131,6 +157,7 @@ export async function loadChatListItems(
 	if (!roomRows.length) return [];
 	const roomIds = roomRows.map((r) => r.id);
 	const latestByRoom = await fetchLatestMessagePerRoom(supabase, roomIds);
+	const lastReadByRoom = await fetchLastReadMap(supabase, userId, roomIds);
 
 	const items: ChatListItem[] = roomRows.map((room) => {
 		const isInitiator = room.initiator_id === userId;
@@ -147,12 +174,24 @@ export async function loadChatListItems(
 			: "";
 		const sortTime = latest?.created_at ?? room.updated_at ?? room.created_at;
 
+		const lastReadIso = lastReadByRoom.get(room.id);
+		const lastReadMs = lastReadIso ? new Date(lastReadIso).getTime() : 0;
+		const latestMs = latest?.created_at
+			? new Date(latest.created_at).getTime()
+			: 0;
+		const hasUnread = Boolean(
+			latest &&
+				latest.sender_id !== userId &&
+				latestMs > lastReadMs,
+		);
+
 		return {
 			roomId: room.id,
 			otherUser,
 			postBookThumbnail: room.post_book?.thumbnail_url ?? null,
 			preview: preview || "아직 메시지가 없어요",
 			sortTime,
+			hasUnread,
 		};
 	});
 
@@ -164,4 +203,13 @@ export async function loadChatListItems(
 	items.sort((a, b) => timeRank(b.sortTime) - timeRank(a.sortTime));
 
 	return items;
+}
+
+/** Any visible thread has messages from the other user newer than this user's read cursor. */
+export async function hasAnyUnreadChatRoom(
+	supabase: SupabaseServer,
+	userId: string,
+): Promise<boolean> {
+	const items = await loadChatListItems(supabase, userId);
+	return items.some((i) => i.hasUnread);
 }

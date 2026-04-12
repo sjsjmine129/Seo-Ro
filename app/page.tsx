@@ -1,4 +1,5 @@
 import { createClient } from "@/utils/supabase/server";
+import { getUnreadCount } from "@/app/actions/notifications";
 import BottomNav from "@/components/BottomNav";
 import HomePullToRefresh from "@/components/HomePullToRefresh";
 import LibraryFilter from "@/components/LibraryFilter";
@@ -191,6 +192,8 @@ export default async function Home({
 	const isEmptyInterestedLibraries =
 		selectedId === "all" && libraries.length === 0 && books.length === 0;
 
+	const unreadNotificationCount = await getUnreadCount();
+
 	return (
 		<>
 			<HomePullToRefresh>
@@ -205,10 +208,16 @@ export default async function Home({
 					</div>
 					<Link
 						href="/notifications"
-						className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-primary/20 bg-white/70 text-primary shadow-md backdrop-blur-md transition-colors hover:bg-white/90"
+						className="relative mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-primary/20 bg-white/70 text-primary shadow-md backdrop-blur-md transition-colors hover:bg-white/90"
 						aria-label="알림"
 					>
 						<Bell className="h-5 w-5" strokeWidth={2} aria-hidden />
+						{unreadNotificationCount > 0 ? (
+							<span
+								className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full border-2 border-white bg-red-500"
+								aria-hidden
+							/>
+						) : null}
 					</Link>
 				</div>
 
