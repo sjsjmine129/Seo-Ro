@@ -3,7 +3,7 @@ import BottomNav from "@/components/BottomNav";
 import HomePullToRefresh from "@/components/HomePullToRefresh";
 import LibraryFilter from "@/components/LibraryFilter";
 import BookCard from "@/components/BookCard";
-import { Library } from "lucide-react";
+import { Bell, Library } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -195,11 +195,22 @@ export default async function Home({
 		<>
 			<HomePullToRefresh>
 			<main className="flex min-h-screen flex-col px-4 pb-32 pt-4">
-				<LibraryFilter
-					libraries={libraries}
-					selectedId={selectedId}
-					selectedLibraryName={selectedLibraryName}
-				/>
+				<div className="sticky top-4 z-40 mb-6 flex w-full items-start justify-between gap-2">
+					<div className="min-w-0 flex-1">
+						<LibraryFilter
+							libraries={libraries}
+							selectedId={selectedId}
+							selectedLibraryName={selectedLibraryName}
+						/>
+					</div>
+					<Link
+						href="/notifications"
+						className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-primary/20 bg-white/70 text-primary shadow-md backdrop-blur-md transition-colors hover:bg-white/90"
+						aria-label="알림"
+					>
+						<Bell className="h-5 w-5" strokeWidth={2} aria-hidden />
+					</Link>
+				</div>
 
 				{errorMessage ? (
 					<div className="rounded-2xl border border-red-200 bg-red-50/80 p-4 text-center text-sm text-red-700">

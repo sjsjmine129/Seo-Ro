@@ -1,17 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
 	Home,
 	Search,
 	BookPlus,
-	Bell,
+	MessageCircle,
 	User,
 	type LucideIcon,
 } from "lucide-react";
-import { getUnreadCount } from "@/app/actions/notifications";
 
 type NavItem = {
 	href: string;
@@ -24,17 +22,12 @@ const NAV_ITEMS: NavItem[] = [
 	{ href: "/", label: "홈", icon: Home },
 	{ href: "/search", label: "검색", icon: Search },
 	{ href: "/shelve", label: "책 꽂기", icon: BookPlus, isFab: true },
-	{ href: "/notifications", label: "알림", icon: Bell },
+	{ href: "/chat", label: "채팅", icon: MessageCircle },
 	{ href: "/mypage", label: "마이페이지", icon: User },
 ];
 
 export default function BottomNav() {
 	const pathname = usePathname();
-	const [unreadCount, setUnreadCount] = useState(0);
-
-	useEffect(() => {
-		getUnreadCount().then(setUnreadCount);
-	}, [pathname]);
 
 	return (
 		<nav
@@ -64,7 +57,10 @@ export default function BottomNav() {
 						);
 					}
 
-					const isActive = pathname === item.href;
+					const isActive =
+						item.href === "/chat"
+							? pathname === "/chat" || pathname.startsWith("/chat/")
+							: pathname === item.href;
 					const Icon = item.icon;
 
 					return (
@@ -81,14 +77,6 @@ export default function BottomNav() {
 									strokeWidth={2}
 									aria-hidden
 								/>
-								{item.href === "/notifications" && unreadCount > 0 && (
-									<span
-										className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold text-white"
-										aria-label={`읽지 않은 알림 ${unreadCount}개`}
-									>
-										{unreadCount > 99 ? "99+" : unreadCount}
-									</span>
-								)}
 							</span>
 							<span className="text-[10px] font-medium">
 								{item.label}

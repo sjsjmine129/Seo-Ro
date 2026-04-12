@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { User, Quote, Trash2 } from "lucide-react";
+import { Loader2, User, Quote, Trash2 } from "lucide-react";
 import BackButton from "@/components/BackButton";
 import BookImageCarousel from "@/components/BookImageCarousel";
 import ConditionBadgeWithTooltip, {
@@ -11,9 +11,8 @@ import ConditionBadgeWithTooltip, {
 } from "@/components/ConditionBadgeWithTooltip";
 import LibraryLocationsBadge from "./components/LibraryLocationsBadge";
 import type { LibraryItem } from "./components/LibraryLocationsBadge";
-import SelectMyBookModal from "./components/SelectMyBookModal";
 import UserProfileModal from "@/components/UserProfileModal";
-import { deleteBook } from "./actions";
+import { createOrGetChatRoom, deleteBook } from "./actions";
 
 type BookDetailClientProps = {
 	book: {
@@ -37,7 +36,7 @@ type BookDetailClientProps = {
 	conditionColor: string;
 	conditionLabel: string;
 	isOwner: boolean;
-	activeExchangeId: string | null;
+	hasActiveExchange: boolean;
 };
 
 export default function BookDetailClient({
@@ -46,17 +45,35 @@ export default function BookDetailClient({
 	conditionColor,
 	conditionLabel,
 	isOwner,
-	activeExchangeId,
+	hasActiveExchange,
 }: BookDetailClientProps) {
 	const router = useRouter();
 	const [isLibraryModalOpen, setIsLibraryModalOpen] = useState(false);
-	const [isSwapModalOpen, setIsSwapModalOpen] = useState(false);
 	const [isOwnerProfileOpen, setIsOwnerProfileOpen] = useState(false);
+	const [isCreatingChat, setIsCreatingChat] = useState(false);
 
-	const inActiveExchange = !!activeExchangeId;
-	const isSwappingWithOther = book.status === "SWAPPING" && !inActiveExchange;
-	const canRequestSwap =
-		!isOwner && book.status === "AVAILABLE" && libraries.length > 0;
+	const isSwappingWithOther =
+		book.status === "SWAPPING" && !hasActiveExchange;
+	const canOpenChat =
+		!isOwner &&
+		libraries.length > 0 &&
+		!isSwappingWithOther &&
+		(book.status === "AVAILABLE" || hasActiveExchange);
+
+	const handleOpenChat = async () => {
+		if (isCreatingChat || !canOpenChat) return;
+		setIsCreatingChat(true);
+		try {
+			const roomId = await createOrGetChatRoom(book.id, book.owner_id);
+			router.push(`/chat/${roomId}`);
+		} catch (err) {
+			alert(
+				err instanceof Error ? err.message : "채팅방을 열지 못했습니다.",
+			);
+		} finally {
+			setIsCreatingChat(false);
+		}
+	};
 
 	const handleDelete = async () => {
 		if (book.status !== "AVAILABLE") return;
@@ -213,9 +230,7 @@ export default function BookDetailClient({
 				</main>
 
 				{/* Floating Bottom Action — owner: edit; others: exchange flow */}
-				{!isLibraryModalOpen &&
-					!isSwapModalOpen &&
-					!isOwnerProfileOpen && (
+				{!isLibraryModalOpen && !isOwnerProfileOpen && (
 					<div
 						className="fixed left-0 right-0 z-40 px-4"
 						style={{
@@ -236,13 +251,6 @@ export default function BookDetailClient({
 										교환 중인 책은 수정할 수 없어요
 									</p>
 								)
-							) : inActiveExchange ? (
-								<Link
-									href={`/exchange/${activeExchangeId}`}
-									className="block w-full rounded-xl bg-primary py-4 text-center text-base font-semibold text-white shadow-lg transition-all hover:opacity-90 active:scale-[0.99]"
-								>
-									교환 화면으로 이동
-								</Link>
 							) : isSwappingWithOther ? (
 								<button
 									type="button"
@@ -251,25 +259,32 @@ export default function BookDetailClient({
 								>
 									교환 진행 중인 책입니다
 								</button>
-							) : canRequestSwap ? (
+							) : canOpenChat ? (
 								<button
 									type="button"
-									onClick={() => setIsSwapModalOpen(true)}
-									className="w-full rounded-xl bg-primary py-4 text-base font-semibold text-white shadow-lg transition-all hover:opacity-90 active:scale-[0.99]"
+									disabled={isCreatingChat}
+									onClick={() => void handleOpenChat()}
+									className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-4 text-base font-semibold text-white shadow-lg transition-all hover:opacity-90 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-70"
 								>
-									바꿔읽기
+									{isCreatingChat ? (
+										<>
+											<Loader2
+												className="h-5 w-5 animate-spin"
+												aria-hidden
+											/>
+											연결 중…
+										</>
+									) : hasActiveExchange ? (
+										"채팅으로 이어가기"
+									) : (
+										"바꿔읽기"
+									)}
 								</button>
 							) : null}
 						</div>
 					</div>
 				)}
 
-				<SelectMyBookModal
-					isOpen={isSwapModalOpen}
-					onClose={() => setIsSwapModalOpen(false)}
-					ownerBookId={book.id}
-					libraries={libraries}
-				/>
 				<UserProfileModal
 					userId={book.owner_id}
 					isOpen={isOwnerProfileOpen}

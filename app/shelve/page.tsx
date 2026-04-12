@@ -112,7 +112,7 @@ export default function ShelvePage() {
 	const [error, setError] = useState<string | null>(null);
 
 	const libraryIdFromUrl = searchParams.get("libraryId");
-	const hasAppliedLibraryIdRef = useRef(false);
+	const lastAppliedLibraryFromUrlRef = useRef<string | null>(null);
 
 	useEffect(() => {
 		createClient()
@@ -123,8 +123,9 @@ export default function ShelvePage() {
 	}, [router]);
 
 	useEffect(() => {
-		if (!libraryIdFromUrl || hasAppliedLibraryIdRef.current) return;
-		hasAppliedLibraryIdRef.current = true;
+		if (!libraryIdFromUrl) return;
+		if (lastAppliedLibraryFromUrlRef.current === libraryIdFromUrl) return;
+		lastAppliedLibraryFromUrlRef.current = libraryIdFromUrl;
 		getLibraryById(libraryIdFromUrl).then((lib) => {
 			if (lib) {
 				setForm((prev) => {
