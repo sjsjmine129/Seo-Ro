@@ -118,6 +118,7 @@ CREATE TABLE public.books (
   user_review VARCHAR(100),
   condition book_condition NOT NULL,
   status book_status NOT NULL DEFAULT 'AVAILABLE',
+  trade_status TEXT NOT NULL DEFAULT 'AVAILABLE' CHECK (trade_status IN ('AVAILABLE', 'TRADING', 'COMPLETED')),
   last_bumped_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -262,6 +263,7 @@ CREATE TRIGGER chat_rooms_updated_at
 CREATE INDEX idx_books_owner_id ON public.books(owner_id);
 CREATE INDEX idx_books_status ON public.books(status);
 CREATE INDEX idx_books_last_bumped_at ON public.books(last_bumped_at DESC);
+CREATE INDEX idx_books_trade_status_last_bumped ON public.books (trade_status, last_bumped_at DESC);
 CREATE INDEX idx_book_libraries_library_id ON public.book_libraries(library_id);
 CREATE INDEX idx_exchanges_requester_id ON public.exchanges(requester_id);
 CREATE INDEX idx_exchanges_owner_id ON public.exchanges(owner_id);

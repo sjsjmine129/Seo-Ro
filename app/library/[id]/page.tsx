@@ -16,6 +16,7 @@ type Book = {
 	authors: string | null;
 	thumbnail_url: string | null;
 	condition: string;
+	trade_status?: string | null;
 };
 
 async function getLibrary(
@@ -39,10 +40,11 @@ async function getBooksAtLibrary(
 	const { data, error } = await supabase
 		.from("books")
 		.select(
-			"id, title, authors, thumbnail_url, condition, book_libraries!inner(library_id)",
+			"id, title, authors, thumbnail_url, condition, trade_status, book_libraries!inner(library_id)",
 		)
 		.eq("status", "AVAILABLE")
 		.eq("book_libraries.library_id", libraryId)
+		.order("trade_status", { ascending: true })
 		.order("last_bumped_at", { ascending: false })
 		.limit(6);
 
@@ -54,6 +56,7 @@ async function getBooksAtLibrary(
 		authors: b.authors ?? null,
 		thumbnail_url: b.thumbnail_url ?? null,
 		condition: b.condition ?? "B",
+		trade_status: (b as { trade_status?: string | null }).trade_status ?? "AVAILABLE",
 	}));
 }
 
@@ -150,7 +153,13 @@ export default async function LibraryDetailPage({
 										href={`/book/${book.id}`}
 										className="flex w-[110px] flex-none flex-col overflow-hidden rounded-xl border border-primary/20 bg-white/90 shadow-sm backdrop-blur-md sm:w-[130px]"
 									>
-										<div className="relative aspect-[3/4] w-full bg-neutral-200">
+										<div
+											className={`relative aspect-[3/4] w-full bg-neutral-200 ${
+												book.trade_status === "TRADING"
+													? "opacity-75"
+													: ""
+											}`}
+										>
 											{book.thumbnail_url ? (
 												<img
 													src={book.thumbnail_url}
@@ -168,6 +177,11 @@ export default async function LibraryDetailPage({
 											<span className="absolute right-1 top-1 rounded bg-primary/90 px-1.5 py-0.5 text-[10px] font-medium text-white">
 												{book.condition}급
 											</span>
+											{book.trade_status === "TRADING" ? (
+												<span className="absolute bottom-1 left-1 right-1 rounded bg-violet-600/90 px-1 py-0.5 text-center text-[9px] font-medium text-white">
+													약속중
+												</span>
+											) : null}
 										</div>
 										<div className="p-2">
 											<p className="line-clamp-2 text-sm font-medium text-foreground">

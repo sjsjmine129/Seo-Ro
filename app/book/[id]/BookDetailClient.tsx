@@ -13,6 +13,8 @@ import ConditionBadgeWithTooltip, {
 import LibraryLocationsBadge from "./components/LibraryLocationsBadge";
 import type { LibraryItem } from "./components/LibraryLocationsBadge";
 import UserProfileModal from "@/components/UserProfileModal";
+import OnboardingTooltip from "@/components/OnboardingTooltip";
+import { useOnboarding } from "@/hooks/useOnboarding";
 import {
 	createOrGetChatRoom,
 	deleteBook,
@@ -32,6 +34,7 @@ type BookDetailClientProps = {
 		user_review: string | null;
 		condition: string;
 		status: string;
+		trade_status?: string | null;
 		owner: {
 			nickname: string | null;
 			profile_image: string | null;
@@ -63,14 +66,25 @@ export default function BookDetailClient({
 	);
 	const [loadingOffers, setLoadingOffers] = useState(false);
 	const [offerLoadError, setOfferLoadError] = useState<string | null>(null);
+	const exchangeGuide = useOnboarding("exchange");
 
 	const isSwappingWithOther =
 		book.status === "SWAPPING" && !hasActiveExchange;
+	const isTradingReserved = (book.trade_status ?? "AVAILABLE") === "TRADING";
 	const canOpenChat =
 		!isOwner &&
 		libraries.length > 0 &&
 		!isSwappingWithOther &&
+		!isTradingReserved &&
 		(book.status === "AVAILABLE" || hasActiveExchange);
+
+	const showExchangeOnboarding =
+		exchangeGuide.shouldShow &&
+		!isOwner &&
+		canOpenChat &&
+		!hasActiveExchange &&
+		!isTradingReserved &&
+		!isSwappingWithOther;
 
 	const registerBookHref =
 		libraries[0]?.id != null
@@ -106,7 +120,9 @@ export default function BookDetailClient({
 			router.push(`/chat/${roomId}`);
 		} catch (err) {
 			alert(
-				err instanceof Error ? err.message : "채팅방을 열지 못했습니다.",
+				err instanceof Error
+					? err.message
+					: "채팅방을 열지 못했습니다.",
 			);
 		} finally {
 			setIsCreatingChat(false);
@@ -127,7 +143,9 @@ export default function BookDetailClient({
 			router.push(`/chat/${roomId}`);
 		} catch (err) {
 			alert(
-				err instanceof Error ? err.message : "채팅방을 열지 못했습니다.",
+				err instanceof Error
+					? err.message
+					: "채팅방을 열지 못했습니다.",
 			);
 		} finally {
 			setIsCreatingChat(false);
@@ -164,6 +182,15 @@ export default function BookDetailClient({
 				</div>
 
 				<main className="flex flex-col gap-8 px-6 pb-6 pt-4">
+					{isTradingReserved ? (
+						<div
+							role="status"
+							className="rounded-xl border border-violet-200 bg-violet-50/90 px-4 py-3 text-center text-sm font-medium text-violet-900"
+						>
+							교환 약속이 잡힌 책입니다. 약속이 취소되면
+							바꿔읽기를 신청할 수 있어요.
+						</div>
+					) : null}
 					{/* Image Carousel */}
 					<div className="overflow-hidden rounded-2xl border border-primary/20 bg-white/60 shadow-sm">
 						<BookImageCarousel
@@ -241,7 +268,8 @@ export default function BookDetailClient({
 									)}
 									<div className="flex flex-col gap-0.5">
 										<p className="text-sm font-medium text-foreground">
-											{book.owner?.nickname ?? "알 수 없음"}
+											{book.owner?.nickname ??
+												"알 수 없음"}
 										</p>
 										{!isOwner && (
 											<span className="mt-0.5 shrink-0 whitespace-nowrap rounded-md bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">
@@ -292,63 +320,83 @@ export default function BookDetailClient({
 				{!isLibraryModalOpen &&
 					!isOwnerProfileOpen &&
 					!selectOfferOpen && (
-					<div
-						className="fixed left-0 right-0 z-40 px-4"
-						style={{
-							bottom: "calc(65px + 16px + env(safe-area-inset-bottom))",
-						}}
-					>
-						<div className="mx-auto max-w-lg">
-							{isOwner ? (
-								book.status === "AVAILABLE" ? (
-									<Link
-										href={`/book/${book.id}/edit`}
-										className="block w-full rounded-xl bg-primary py-4 text-center text-base font-semibold text-white shadow-lg transition-all hover:opacity-90 active:scale-[0.99]"
-									>
-										등록 내용 수정하기
-									</Link>
-								) : (
-									<p className="rounded-xl border border-primary/20 bg-white/70 py-4 text-center text-sm text-muted-foreground backdrop-blur-md">
-										교환 중인 책은 수정할 수 없어요
-									</p>
-								)
-							) : isSwappingWithOther ? (
-								<button
-									type="button"
-									disabled
-									className="w-full cursor-not-allowed rounded-xl bg-neutral-400 py-4 text-base font-semibold text-white shadow-lg"
-								>
-									교환 진행 중인 책입니다
-								</button>
-							) : canOpenChat ? (
-								<button
-									type="button"
-									disabled={isCreatingChat}
-									onClick={() =>
-										void (hasActiveExchange
-											? handleResumeChat()
-											: openSelectOfferSheet())
-									}
-									className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-4 text-base font-semibold text-white shadow-lg transition-all hover:opacity-90 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-70"
-								>
-									{isCreatingChat ? (
-										<>
-											<Loader2
-												className="h-5 w-5 animate-spin"
-												aria-hidden
-											/>
-											연결 중…
-										</>
-									) : hasActiveExchange ? (
-										"채팅으로 이어가기"
+						<div
+							className="fixed left-0 right-0 z-40 px-4"
+							style={{
+								bottom: "calc(65px + 16px + env(safe-area-inset-bottom))",
+							}}
+						>
+							<div className="mx-auto max-w-lg">
+								{isOwner ? (
+									book.status === "AVAILABLE" ? (
+										<Link
+											href={`/book/${book.id}/edit`}
+											className="block w-full rounded-xl bg-primary py-4 text-center text-base font-semibold text-white shadow-lg transition-all hover:opacity-90 active:scale-[0.99]"
+										>
+											등록 내용 수정하기
+										</Link>
 									) : (
-										"바꿔읽기"
-									)}
-								</button>
-							) : null}
+										<p className="rounded-xl border border-primary/20 bg-white/70 py-4 text-center text-sm text-muted-foreground backdrop-blur-md">
+											교환 중인 책은 수정할 수 없어요
+										</p>
+									)
+								) : isTradingReserved ? (
+									<button
+										type="button"
+										disabled
+										className="w-full cursor-not-allowed rounded-xl bg-violet-400 py-4 text-base font-semibold text-white shadow-lg"
+									>
+										교환 약속 중
+									</button>
+								) : isSwappingWithOther ? (
+									<button
+										type="button"
+										disabled
+										className="w-full cursor-not-allowed rounded-xl bg-neutral-400 py-4 text-base font-semibold text-white shadow-lg"
+									>
+										교환 진행 중인 책입니다
+									</button>
+								) : canOpenChat ? (
+									<div className="relative w-full">
+										{showExchangeOnboarding ? (
+											<OnboardingTooltip
+												message="이 책이 마음에 드시나요? 내 책과 바꿔읽기를 신청해 보세요!"
+												position="bottom"
+												align="center"
+												onClose={() => {
+													exchangeGuide.markAsSeen();
+												}}
+											/>
+										) : null}
+										<button
+											type="button"
+											disabled={isCreatingChat}
+											onClick={() =>
+												void (hasActiveExchange
+													? handleResumeChat()
+													: openSelectOfferSheet())
+											}
+											className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-4 text-base font-semibold text-white shadow-lg transition-all hover:opacity-90 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-70"
+										>
+											{isCreatingChat ? (
+												<>
+													<Loader2
+														className="h-5 w-5 animate-spin"
+														aria-hidden
+													/>
+													연결 중…
+												</>
+											) : hasActiveExchange ? (
+												"채팅으로 이어가기"
+											) : (
+												"바꿔읽기"
+											)}
+										</button>
+									</div>
+								) : null}
+							</div>
 						</div>
-					</div>
-				)}
+					)}
 
 				<UserProfileModal
 					userId={book.owner_id}
@@ -368,8 +416,8 @@ export default function BookDetailClient({
 									바꿔읽기로 줄 책 선택
 								</p>
 								<p className="mt-1 text-xs text-muted-foreground">
-									이 책이 등록된 도서관과 같은 허브에 올린 내 책만
-									선택할 수 있어요.
+									이 책이 등록된 도서관과 같은 허브에 올린 내
+									책만 선택할 수 있어요.
 								</p>
 							</div>
 							<Link
@@ -393,12 +441,15 @@ export default function BookDetailClient({
 							) : offerCandidates.length === 0 ? (
 								<div className="flex flex-col items-center gap-4 py-10 text-center">
 									<p className="max-w-[260px] text-sm text-muted-foreground">
-										조건에 맞는 내 책이 없어요. 같은 도서관에 책을
-										등록한 뒤 다시 시도해 주세요.
+										조건에 맞는 내 책이 없어요. 같은
+										도서관에 책을 등록한 뒤 다시 시도해
+										주세요.
 									</p>
 									<Link
 										href={registerBookHref}
-										onClick={() => setSelectOfferOpen(false)}
+										onClick={() =>
+											setSelectOfferOpen(false)
+										}
 										className="rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
 									>
 										책 등록하기
@@ -413,13 +464,17 @@ export default function BookDetailClient({
 												disabled={isCreatingChat}
 												className="flex w-full items-center gap-3 rounded-xl border border-primary/15 bg-white/80 px-3 py-2 text-left text-sm transition-colors hover:bg-white disabled:opacity-50"
 												onClick={() =>
-													void handleConfirmOfferBook(b.id)
+													void handleConfirmOfferBook(
+														b.id,
+													)
 												}
 											>
 												<div className="h-12 w-9 shrink-0 overflow-hidden rounded bg-neutral-200">
 													{b.thumbnail_url ? (
 														<img
-															src={b.thumbnail_url}
+															src={
+																b.thumbnail_url
+															}
 															alt=""
 															className="h-full w-full object-cover"
 														/>

@@ -11,6 +11,8 @@ export type BookCardProps = {
 	libraryName: string;
 	isInterestedLibrary?: boolean;
 	isSwapped?: boolean;
+	/** Hybrid chat: 약속 수락 후 예약됨 */
+	isTrading?: boolean;
 };
 
 export default function BookCard({
@@ -22,6 +24,7 @@ export default function BookCard({
 	libraryName,
 	isInterestedLibrary = false,
 	isSwapped = false,
+	isTrading = false,
 }: BookCardProps) {
 	return (
 		<Link
@@ -34,7 +37,7 @@ export default function BookCard({
 				<div
 					className={`relative h-24 w-16 flex-shrink-0 overflow-hidden rounded-md bg-neutral-200 ${
 						isSwapped ? "grayscale" : ""
-					}`}
+					} ${isTrading ? "opacity-75" : ""}`}
 				>
 					{thumbnailUrl ? (
 						<img
@@ -53,6 +56,11 @@ export default function BookCard({
 						{isInterestedLibrary && !isSwapped && (
 							<span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
 								⭐ 관심 도서관
+							</span>
+						)}
+						{isTrading && (
+							<span className="rounded bg-violet-100 px-2 py-0.5 text-xs font-medium text-violet-800">
+								교환 약속 중
 							</span>
 						)}
 						{isSwapped && (

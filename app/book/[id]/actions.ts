@@ -201,6 +201,7 @@ export async function getMyOfferBooksForListing(
 		)
 		.eq("owner_id", user.id)
 		.eq("status", "AVAILABLE")
+		.eq("trade_status", "AVAILABLE")
 		.in("book_libraries.library_id", libIds);
 
 	if (blError) throw new Error(blError.message);
@@ -245,7 +246,7 @@ export async function createOrGetChatRoom(
 
 	const { data: book, error: bookError } = await supabase
 		.from("books")
-		.select("id, owner_id, status")
+		.select("id, owner_id, status, trade_status")
 		.eq("id", postBookId)
 		.single();
 
@@ -257,6 +258,11 @@ export async function createOrGetChatRoom(
 	}
 	if (book.owner_id === user.id) {
 		throw new Error("본인의 책에는 바꿔읽기를 신청할 수 없습니다.");
+	}
+	if (book.trade_status === "TRADING") {
+		throw new Error(
+			"교환 약속이 잡힌 책입니다. 약속이 끝난 뒤에 다시 시도해 주세요.",
+		);
 	}
 
 	const { data: roomCandidates, error: existingError } = await supabase
@@ -302,14 +308,18 @@ export async function createOrGetChatRoom(
 
 	const { data: offerBook, error: offerErr } = await supabase
 		.from("books")
-		.select("id, title, thumbnail_url, owner_id, status")
+		.select("id, title, thumbnail_url, owner_id, status, trade_status")
 		.eq("id", initiatorOfferBookId)
 		.single();
 
 	if (offerErr || !offerBook) {
 		throw new Error("선택한 책을 찾을 수 없습니다.");
 	}
-	if (offerBook.owner_id !== user.id || offerBook.status !== "AVAILABLE") {
+	if (
+		offerBook.owner_id !== user.id ||
+		offerBook.status !== "AVAILABLE" ||
+		offerBook.trade_status === "TRADING"
+	) {
 		throw new Error("선택한 책으로 바꿔읽기를 제안할 수 없습니다.");
 	}
 

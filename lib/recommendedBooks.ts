@@ -1,4 +1,5 @@
 import type { createClient } from "@/utils/supabase/server";
+import { bookTradeStatusRank } from "@/lib/constants";
 
 const SCORE_SAME_LIBRARY = 50;
 const SCORE_SAME_AUTHOR = 40;
@@ -42,6 +43,7 @@ type CandidateRow = {
 	publisher: string | null;
 	thumbnail_url: string | null;
 	created_at: string;
+	trade_status: string | null;
 	book_libraries: BookLibrariesRow[] | BookLibrariesRow | null;
 };
 
@@ -115,11 +117,13 @@ export async function getRecommendedBooks(
 			publisher,
 			thumbnail_url,
 			created_at,
+			trade_status,
 			book_libraries(library_id, libraries(id, name))
 		`,
 		)
 		.neq("id", current.id)
 		.eq("status", "AVAILABLE")
+		.order("trade_status", { ascending: true })
 		.order("last_bumped_at", { ascending: false })
 		.limit(CANDIDATE_LIMIT);
 
@@ -153,6 +157,7 @@ export async function getRecommendedBooks(
 
 		return {
 			score,
+			tradeRank: bookTradeStatusRank(row.trade_status),
 			id: row.id,
 			title: row.title,
 			thumbnail_url: row.thumbnail_url,
@@ -161,7 +166,10 @@ export async function getRecommendedBooks(
 	});
 
 	return scored
-		.sort((a, b) => b.score - a.score)
+		.sort((a, b) => {
+			if (a.tradeRank !== b.tradeRank) return a.tradeRank - b.tradeRank;
+			return b.score - a.score;
+		})
 		.slice(0, RECOMMENDED_COUNT)
-		.map(({ score: _score, ...rest }) => rest);
+		.map(({ score: _score, tradeRank: _tr, ...rest }) => rest);
 }
