@@ -508,7 +508,9 @@ export async function acceptAppointment(
 
 	const { data: room, error: roomError } = await supabase
 		.from("chat_rooms")
-		.select("initiator_id, receiver_id, status")
+		.select(
+			"initiator_id, receiver_id, status, post_book_id, initiator_offer_book_id",
+		)
 		.eq("id", roomId)
 		.single();
 
@@ -541,12 +543,16 @@ export async function acceptAppointment(
 
 	const agreedAt = new Date(payload.meetAt).toISOString();
 
+	// Must UPDATE this row (not only insert messages) so Realtime `chat_rooms` listeners fire for the peer.
 	const { data: updatedRoom, error: updError } = await supabase
 		.from("chat_rooms")
-		.update({ status: "APPOINTMENT_SET", appointment_at: agreedAt })
+		.update({
+			status: "APPOINTMENT_SET" as const,
+			appointment_at: agreedAt,
+		})
 		.eq("id", roomId)
 		.eq("status", "NEGOTIATING")
-		.select("id")
+		.select("id, status, appointment_at")
 		.maybeSingle();
 
 	if (updError) throw new Error(updError.message);
@@ -577,6 +583,25 @@ export async function acceptAppointment(
 		"상대방이 제안한 약속 시간을 수락했습니다.",
 		`/chat/${roomId}`,
 	);
+
+	const tradingBookIds = [
+		room.post_book_id as string,
+		room.initiator_offer_book_id as string | null,
+	].filter((id): id is string => typeof id === "string" && id.length > 0);
+
+	if (tradingBookIds.length > 0) {
+		const { error: tradeErr } = await supabase
+			.from("books")
+			.update({ trade_status: "TRADING" })
+			.in("id", tradingBookIds);
+		if (tradeErr) throw new Error(tradeErr.message);
+		for (const bid of tradingBookIds) {
+			revalidatePath(`/book/${bid}`);
+		}
+	}
+	revalidatePath("/");
+	revalidatePath("/search");
+	revalidatePath("/chat");
 
 	return {
 		messageRow: reply as ChatMessageRow,
@@ -672,7 +697,9 @@ export async function leaveChatRoom(roomId: string): Promise<LeaveChatRoomResult
 
 	const { data: room, error: roomError } = await supabase
 		.from("chat_rooms")
-		.select("initiator_id, receiver_id, status, left_by_user_ids")
+		.select(
+			"initiator_id, receiver_id, status, left_by_user_ids, post_book_id, initiator_offer_book_id",
+		)
 		.eq("id", roomId)
 		.single();
 
@@ -707,6 +734,29 @@ export async function leaveChatRoom(roomId: string): Promise<LeaveChatRoomResult
 		.eq("id", roomId);
 
 	if (updError) throw new Error(updError.message);
+
+	if (
+		isFirstToLeave &&
+		room.status === "APPOINTMENT_SET"
+	) {
+		const revertIds = [
+			room.post_book_id as string,
+			room.initiator_offer_book_id as string | null,
+		].filter((id): id is string => typeof id === "string" && id.length > 0);
+		if (revertIds.length > 0) {
+			const { error: bookErr } = await supabase
+				.from("books")
+				.update({ trade_status: "AVAILABLE" })
+				.in("id", revertIds);
+			if (bookErr) throw new Error(bookErr.message);
+			for (const bid of revertIds) {
+				revalidatePath(`/book/${bid}`);
+			}
+			revalidatePath("/");
+			revalidatePath("/search");
+			revalidatePath("/chat");
+		}
+	}
 
 	if (!isFirstToLeave) {
 		revalidatePath("/chat");

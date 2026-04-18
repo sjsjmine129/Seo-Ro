@@ -12,6 +12,8 @@ import {
 	type LucideIcon,
 } from "lucide-react";
 import { getUnreadSummary } from "@/app/actions/unreadSummary";
+import OnboardingTooltip from "@/components/OnboardingTooltip";
+import { useOnboarding } from "@/hooks/useOnboarding";
 
 type NavItem = {
 	href: string;
@@ -31,6 +33,7 @@ const NAV_ITEMS: NavItem[] = [
 export default function BottomNav() {
 	const pathname = usePathname();
 	const [chatUnread, setChatUnread] = useState(false);
+	const navSearchGuide = useOnboarding("nav_search");
 
 	useEffect(() => {
 		let alive = true;
@@ -54,11 +57,11 @@ export default function BottomNav() {
 
 	return (
 		<nav
-			className="fixed bottom-0 left-0 right-0 z-50 flex h-[65px] items-end justify-center pb-[env(safe-area-inset-bottom)]"
+			className="fixed bottom-0 left-0 right-0 z-50 flex h-[65px] items-end justify-center overflow-visible pb-[env(safe-area-inset-bottom)]"
 			aria-label="하단 탐색"
 		>
 			{/* Glassmorphism bar: bg-glass-bg backdrop-blur-md border-primary/20 */}
-			<div className="relative mx-auto flex h-16 rounded-t-2xl w-full max-w-lg items-center justify-around border-t border-primary/20 bg-glass-bg px-2 backdrop-blur-md">
+			<div className="relative mx-auto flex h-16 overflow-visible rounded-t-2xl w-full max-w-lg items-center justify-around border-t border-primary/20 bg-glass-bg px-2 backdrop-blur-md">
 				{NAV_ITEMS.map((item) => {
 					if (item.isFab) {
 						return (
@@ -86,6 +89,49 @@ export default function BottomNav() {
 							: pathname === item.href;
 					const Icon = item.icon;
 					const showChatDot = item.href === "/chat" && chatUnread;
+
+					if (item.href === "/search") {
+						return (
+							<div
+								key={item.href}
+								className="relative flex min-w-0 flex-1 flex-col overflow-visible"
+							>
+								<Link
+									href={item.href}
+									className={`relative flex flex-1 flex-col items-center justify-center gap-0.5 overflow-visible py-2 rounded-lg transition-colors hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background ${isActive ? "text-primary" : "text-neutral-500"}`}
+									aria-label={item.label}
+									aria-current={isActive ? "page" : undefined}
+								>
+									<span className="relative inline-flex">
+										<Icon
+											className="h-6 w-6"
+											strokeWidth={2}
+											aria-hidden
+										/>
+									</span>
+									<span className="text-[10px] font-medium">
+										{item.label}
+									</span>
+									{isActive && (
+										<span
+											className="absolute bottom-0 h-0.5 w-8 rounded-full bg-primary"
+											aria-hidden
+										/>
+									)}
+								</Link>
+								{navSearchGuide.shouldShow ? (
+									<OnboardingTooltip
+										message="동네 도서관의 책들을 검색하고 나만의 관심 도서관을 등록해 보세요!"
+										position="bottom"
+										align="center"
+										onClose={() => {
+											navSearchGuide.markAsSeen();
+										}}
+									/>
+								) : null}
+							</div>
+						);
+					}
 
 					return (
 						<Link

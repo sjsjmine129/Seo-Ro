@@ -50,9 +50,10 @@ export async function fetchSearchFallbackBooks(
 	let query = supabase
 		.from("books")
 		.select(
-			"id, title, thumbnail_url, book_libraries!inner(library_id, libraries(id, name))",
+			"id, title, thumbnail_url, trade_status, book_libraries!inner(library_id, libraries(id, name))",
 		)
 		.eq("status", "AVAILABLE")
+		.order("trade_status", { ascending: true })
 		.order("last_bumped_at", { ascending: false })
 		.limit(POOL_LIMIT);
 

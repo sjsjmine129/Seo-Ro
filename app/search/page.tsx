@@ -9,7 +9,10 @@ import InlineLoadingLogo from "@/components/InlineLoadingLogo";
 import BookCard from "@/components/BookCard";
 import { createClient } from "@/utils/supabase/client";
 import BottomNav from "@/components/BottomNav";
+import OnboardingTooltip from "@/components/OnboardingTooltip";
+import { useOnboarding } from "@/hooks/useOnboarding";
 import { fetchSearchFallbackBooks } from "@/lib/searchFallbackBooks";
+import { bookTradeStatusRank } from "@/lib/constants";
 import type { SearchFallbackBook } from "@/lib/searchFallbackBooks";
 
 const PAGE_SIZE = 15;
@@ -36,6 +39,7 @@ type BookItem = {
 	thumbnail_url: string | null;
 	condition: string;
 	status: string;
+	trade_status?: string | null;
 	book_libraries: BookLibrary[] | BookLibrary | null;
 };
 
@@ -46,6 +50,7 @@ type BookResult = {
 	thumbnail_url: string | null;
 	condition: string;
 	status: string;
+	trade_status?: string | null;
 	libraryName: string;
 	libraryId: string;
 	isInterestedLibrary: boolean;
@@ -112,6 +117,7 @@ export default function SearchPage() {
 	);
 	const router = useRouter();
 	const supabase = useMemo(() => createClient(), []);
+	const searchInputGuide = useOnboarding("search_input");
 
 	const updateTab = useCallback(
 		(tab: "library" | "book") => {
@@ -233,10 +239,12 @@ export default function SearchPage() {
 				const { data: booksData, error } = await supabase
 					.from("books")
 					.select(
-						"id, title, authors, thumbnail_url, condition, status, book_libraries(library_id, libraries(id, name))",
+						"id, title, authors, thumbnail_url, condition, status, trade_status, last_bumped_at, book_libraries(library_id, libraries(id, name))",
 					)
 					.or(`title.ilike.${pattern},authors.ilike.${pattern}`)
 					.neq("status", "HIDDEN")
+					.order("trade_status", { ascending: true })
+					.order("last_bumped_at", { ascending: false })
 					.limit(100);
 
 				if (error) throw error;
@@ -261,6 +269,7 @@ export default function SearchPage() {
 						thumbnail_url: b.thumbnail_url,
 						condition: b.condition ?? "B",
 						status: b.status,
+						trade_status: b.trade_status,
 						libraryName: first.libraryName,
 						libraryId: first.libraryId,
 						isInterestedLibrary: isInterested,
@@ -283,6 +292,11 @@ export default function SearchPage() {
 					...availableOther,
 					...(hasAvailable ? [] : fallback),
 				];
+				sorted.sort(
+					(a, b) =>
+						bookTradeStatusRank(a.trade_status) -
+						bookTradeStatusRank(b.trade_status),
+				);
 				setBookResults(sorted);
 
 				if (sorted.length === 0) {
@@ -652,6 +666,7 @@ export default function SearchPage() {
 										book.status === "SWAPPED" ||
 										book.status === "SWAPPING"
 									}
+									isTrading={book.trade_status === "TRADING"}
 								/>
 							</li>
 						))}
@@ -686,8 +701,8 @@ export default function SearchPage() {
 						</div>
 					)}
 
-				{/* Fixed search bar */}
-				<div className="fixed bottom-4 left-0 right-0 z-40 flex flex-col items-center pb-[calc(65px+env(safe-area-inset-bottom))] pl-4 pr-4 pt-2">
+				{/* Fixed search bar — overflow-visible so onboarding bubble is not clipped */}
+				<div className="fixed bottom-4 left-0 right-0 z-40 flex flex-col items-center overflow-visible pb-[calc(65px+env(safe-area-inset-bottom))] pl-4 pr-4 pt-2">
 					{isLibraryTab && showLocationButton && (
 						<button
 							type="button"
@@ -698,7 +713,17 @@ export default function SearchPage() {
 							현재 위치로 가까운 도서관 찾기
 						</button>
 					)}
-					<div className="flex w-full max-w-lg items-center gap-2 rounded-2xl border border-primary/20 bg-white/90 px-4 py-3 shadow-md backdrop-blur-md">
+					<div className="relative flex w-full max-w-lg items-center gap-2 rounded-2xl border border-primary/20 bg-white/90 px-4 py-3 shadow-md backdrop-blur-md">
+						{searchInputGuide.shouldShow ? (
+							<OnboardingTooltip
+								message="집 주변이나 자주 가는 도서관을 등록하고 이웃과 연결되어 보세요."
+								position="top"
+								align="center"
+								onClose={() => {
+									searchInputGuide.markAsSeen();
+								}}
+							/>
+						) : null}
 						{isLibraryTab ? (
 							<Library className="h-5 w-5 flex-shrink-0 text-foreground/50" />
 						) : (
