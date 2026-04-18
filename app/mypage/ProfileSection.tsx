@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Library } from "lucide-react";
+import { MAX_FAVORITE_LIBRARIES } from "@/lib/constants";
 import ProfileEditModal from "./ProfileEditModal";
 import type { UpdateUserProfileResult } from "./actions";
 
@@ -115,7 +116,10 @@ export default function ProfileSection({
 				{/* Interested Libraries */}
 				<div className="mt-4">
 					<p className="mb-2 text-xs font-medium text-muted-foreground">
-						관심 도서관
+						관심 도서관{" "}
+						<span className="text-foreground/80">
+							({libraries.length} / {MAX_FAVORITE_LIBRARIES})
+						</span>
 					</p>
 					{libraries.length === 0 ? (
 						<Link

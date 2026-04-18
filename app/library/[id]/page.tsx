@@ -8,13 +8,7 @@ import BottomNav from "@/components/BottomNav";
 import NearbyLibraries from "@/components/NearbyLibraries";
 import LibraryDetailClient from "./LibraryDetailClient";
 import { addInterest, removeInterest } from "./actions";
-
-function getMaxAllowed(bookshelfScore: number): number {
-	if (bookshelfScore < 10) return 2;
-	if (bookshelfScore < 30) return 3;
-	if (bookshelfScore < 50) return 4;
-	return 5;
-}
+import { MAX_FAVORITE_LIBRARIES } from "@/lib/constants";
 
 type Book = {
 	id: string;
@@ -95,15 +89,6 @@ export default async function LibraryDetailPage({
 	const isInterested = interestedIds.has(id);
 	const userLibraryCount = userLibraries?.length ?? 0;
 
-	const { data: profile } = await supabase
-		.from("users")
-		.select("bookshelf_score")
-		.eq("id", user.id)
-		.single();
-
-	const bookshelfScore = profile?.bookshelf_score ?? 1;
-	const maxAllowed = getMaxAllowed(bookshelfScore);
-
 	const homeUrl = `/?libraryId=${id}`;
 
 	return (
@@ -138,7 +123,7 @@ export default async function LibraryDetailPage({
 							}}
 							isInterested={isInterested}
 							userLibraryCount={userLibraryCount}
-							maxAllowed={maxAllowed}
+							maxAllowed={MAX_FAVORITE_LIBRARIES}
 							onAddInterest={addInterest}
 							onRemoveInterest={removeInterest}
 						/>
