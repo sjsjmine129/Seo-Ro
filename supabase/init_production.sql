@@ -2,8 +2,8 @@
 -- Seo-Ro (서로) — Unified production database initialization
 --
 -- Run ONCE in the Supabase SQL Editor on a new, empty project.
--- Consolidates: schema.sql, migrations (time/counter enum values & columns are
--- already reflected below), notifications, push_subscriptions, storage.sql
+-- Consolidates: schema.sql, storage.sql, hybrid chat, read cursors, realtime
+-- publication (incremental migrations removed; keep this file in sync with schema.sql).
 --
 -- Order: Extensions → Enums → Tables → Indexes → Functions → Triggers →
 --        Table RLS → Storage buckets → Storage RLS
@@ -35,6 +35,18 @@ CREATE TYPE exchange_status AS ENUM (
   'REJECTED'
 );
 
+CREATE TYPE public.chat_room_status AS ENUM (
+  'NEGOTIATING',
+  'APPOINTMENT_SET',
+  'COMPLETED'
+);
+
+CREATE TYPE public.chat_message_type AS ENUM (
+  'TEXT',
+  'SYSTEM_BOOK_CHANGE',
+  'SYSTEM_APPOINTMENT'
+);
+
 -- -----------------------------------------------------------------------------
 -- 3. TABLES (core)
 -- -----------------------------------------------------------------------------
@@ -50,7 +62,7 @@ CREATE TABLE public.users (
 );
 
 COMMENT ON TABLE public.users IS 'User profiles linked to auth.users';
-COMMENT ON COLUMN public.users.bookshelf_score IS 'Score determines max libraries (2~5). Starts at 1.';
+COMMENT ON COLUMN public.users.bookshelf_score IS 'Community score (권). Starts at 1. 관심 도서관 cap is fixed at 8 (see check_user_interested_libraries_max).';
 
 CREATE TABLE public.libraries (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -119,7 +131,7 @@ COMMENT ON COLUMN public.exchanges.requester_completed IS 'Requester confirmed t
 COMMENT ON COLUMN public.exchanges.owner_completed IS 'Owner confirmed they completed the physical book exchange';
 
 -- -----------------------------------------------------------------------------
--- 3b. TABLES (notifications & push) — from migrations 20250223230000, 20250223240000
+-- 3b. TABLES (notifications & push)
 -- -----------------------------------------------------------------------------
 
 CREATE TABLE public.notifications (
@@ -151,6 +163,55 @@ CREATE TABLE public.push_subscriptions (
 COMMENT ON TABLE public.push_subscriptions IS 'Web Push subscription endpoints for PWA notifications';
 
 -- -----------------------------------------------------------------------------
+-- 3c. TABLES (hybrid chat + read cursors)
+-- -----------------------------------------------------------------------------
+
+CREATE TABLE public.chat_rooms (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  post_book_id UUID NOT NULL REFERENCES public.books(id) ON DELETE CASCADE,
+  initiator_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  receiver_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  initiator_offer_book_id UUID REFERENCES public.books(id) ON DELETE SET NULL,
+  status public.chat_room_status NOT NULL DEFAULT 'NEGOTIATING',
+  left_by_user_ids UUID[] NOT NULL DEFAULT '{}',
+  appointment_at TIMESTAMPTZ NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT chat_rooms_distinct_participants CHECK (initiator_id <> receiver_id)
+);
+
+COMMENT ON TABLE public.chat_rooms IS 'Negotiation thread tied to a listed book; offer book may change over time.';
+COMMENT ON COLUMN public.chat_rooms.post_book_id IS 'Book that was originally requested (receiver''s listing).';
+COMMENT ON COLUMN public.chat_rooms.initiator_offer_book_id IS 'Book offered in return; nullable until chosen; may be updated.';
+COMMENT ON COLUMN public.chat_rooms.left_by_user_ids IS 'Participants who removed this room from their chat list; they remain initiator/receiver for RLS.';
+COMMENT ON COLUMN public.chat_rooms.appointment_at IS 'Confirmed meet time after receiver accepts a SYSTEM_APPOINTMENT proposal.';
+
+CREATE TABLE public.messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  room_id UUID NOT NULL REFERENCES public.chat_rooms(id) ON DELETE CASCADE,
+  sender_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  message_type public.chat_message_type NOT NULL,
+  content TEXT NOT NULL DEFAULT '',
+  participant_ids UUID[] NOT NULL DEFAULT '{}',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+COMMENT ON TABLE public.messages IS 'Chat lines: plain TEXT or JSON string in content for SYSTEM_* types.';
+COMMENT ON COLUMN public.messages.content IS 'Plain text for TEXT; JSON string for system action payloads.';
+COMMENT ON COLUMN public.messages.participant_ids IS 'Room participants [initiator_id, receiver_id]; copied on insert for RLS without subqueries.';
+
+ALTER TABLE public.messages REPLICA IDENTITY FULL;
+
+CREATE TABLE public.chat_room_reads (
+  room_id UUID NOT NULL REFERENCES public.chat_rooms(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  last_read_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (room_id, user_id)
+);
+
+COMMENT ON TABLE public.chat_room_reads IS 'Last time each participant read the thread; used for unread badges.';
+
+-- -----------------------------------------------------------------------------
 -- 4. INDEXES
 -- -----------------------------------------------------------------------------
 
@@ -167,6 +228,12 @@ CREATE INDEX idx_notifications_created_at ON public.notifications(created_at DES
 
 CREATE INDEX idx_push_subscriptions_user_id ON public.push_subscriptions(user_id);
 
+CREATE INDEX idx_messages_room_created ON public.messages (room_id, created_at DESC);
+CREATE INDEX idx_chat_rooms_post_book ON public.chat_rooms (post_book_id);
+CREATE INDEX idx_chat_rooms_initiator ON public.chat_rooms (initiator_id);
+CREATE INDEX idx_chat_rooms_receiver ON public.chat_rooms (receiver_id);
+CREATE INDEX idx_chat_room_reads_user ON public.chat_room_reads (user_id);
+
 -- -----------------------------------------------------------------------------
 -- 5. FUNCTIONS
 -- -----------------------------------------------------------------------------
@@ -174,30 +241,15 @@ CREATE INDEX idx_push_subscriptions_user_id ON public.push_subscriptions(user_id
 CREATE OR REPLACE FUNCTION public.check_user_interested_libraries_max()
 RETURNS TRIGGER AS $$
 DECLARE
-  current_score INTEGER;
-  max_allowed INTEGER;
+  max_allowed INTEGER := 8;
   current_count INTEGER;
 BEGIN
-  SELECT bookshelf_score INTO current_score
-  FROM public.users
-  WHERE id = NEW.user_id;
-
-  IF current_score < 10 THEN
-    max_allowed := 2;
-  ELSIF current_score < 30 THEN
-    max_allowed := 3;
-  ELSIF current_score < 50 THEN
-    max_allowed := 4;
-  ELSE
-    max_allowed := 5;
-  END IF;
-
   SELECT COUNT(*) INTO current_count
   FROM public.user_interested_libraries
   WHERE user_id = NEW.user_id;
 
   IF current_count >= max_allowed THEN
-    RAISE EXCEPTION 'Limit reached. Your current score (%) allows max % libraries.', current_score, max_allowed;
+    RAISE EXCEPTION '관심 도서관은 최대 8개까지 등록할 수 있습니다.';
   END IF;
 
   RETURN NEW;
@@ -221,7 +273,6 @@ BEGIN
 END;
 $$;
 
--- From migration 20250223210000_add_increment_bookshelf_score.sql
 CREATE OR REPLACE FUNCTION public.increment_bookshelf_score(user_ids UUID[], delta INTEGER)
 RETURNS void AS $$
 BEGIN
@@ -241,6 +292,11 @@ CREATE TRIGGER users_updated_at BEFORE UPDATE ON public.users FOR EACH ROW EXECU
 CREATE TRIGGER books_updated_at BEFORE UPDATE ON public.books FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 CREATE TRIGGER exchanges_updated_at BEFORE UPDATE ON public.exchanges FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
+CREATE TRIGGER chat_rooms_updated_at
+  BEFORE UPDATE ON public.chat_rooms
+  FOR EACH ROW
+  EXECUTE FUNCTION public.set_updated_at();
+
 CREATE TRIGGER on_auth_user_created AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
 -- -----------------------------------------------------------------------------
@@ -255,6 +311,9 @@ ALTER TABLE public.book_libraries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.exchanges ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.push_subscriptions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.chat_rooms ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.chat_room_reads ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "users_select" ON public.users FOR SELECT USING (true);
 CREATE POLICY "users_update_own" ON public.users FOR UPDATE USING (auth.uid() = id);
@@ -292,6 +351,49 @@ CREATE POLICY "push_subscriptions_insert_own" ON public.push_subscriptions
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "push_subscriptions_delete_own" ON public.push_subscriptions
   FOR DELETE USING (auth.uid() = user_id);
+
+CREATE POLICY "chat_rooms_select_participants"
+  ON public.chat_rooms FOR SELECT
+  USING (auth.uid() = initiator_id OR auth.uid() = receiver_id);
+
+CREATE POLICY "chat_rooms_insert_participants"
+  ON public.chat_rooms FOR INSERT
+  WITH CHECK (auth.uid() = initiator_id OR auth.uid() = receiver_id);
+
+CREATE POLICY "chat_rooms_update_participants"
+  ON public.chat_rooms FOR UPDATE
+  USING (auth.uid() = initiator_id OR auth.uid() = receiver_id);
+
+CREATE POLICY "messages_select_by_participant_ids"
+  ON public.messages FOR SELECT
+  USING (auth.uid() = ANY (participant_ids));
+
+CREATE POLICY "messages_insert_by_participant_ids"
+  ON public.messages FOR INSERT
+  WITH CHECK (
+    auth.uid() = sender_id
+    AND (
+      auth.uid() = ANY (participant_ids)
+      OR auth.uid() = sender_id
+    )
+  );
+
+CREATE POLICY "chat_room_reads_select_own"
+  ON public.chat_room_reads FOR SELECT
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "chat_room_reads_insert_own"
+  ON public.chat_room_reads FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "chat_room_reads_update_own"
+  ON public.chat_room_reads FOR UPDATE
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "chat_room_reads_delete_own"
+  ON public.chat_room_reads FOR DELETE
+  USING (auth.uid() = user_id);
 
 -- INSERT on notifications is intended for service role / server-side only (bypasses RLS).
 
@@ -340,6 +442,36 @@ CREATE POLICY "avatars_delete_own"
 ON storage.objects FOR DELETE
 TO authenticated
 USING (bucket_id = 'avatars' AND (storage.foldername(name))[1] = auth.uid()::text);
+
+-- -----------------------------------------------------------------------------
+-- 10. REALTIME — add tables to supabase_realtime publication (idempotent)
+-- -----------------------------------------------------------------------------
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime'
+      AND schemaname = 'public'
+      AND tablename = 'chat_rooms'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.chat_rooms;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime'
+      AND schemaname = 'public'
+      AND tablename = 'messages'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.messages;
+  END IF;
+END $$;
 
 -- =============================================================================
 -- End of init_production.sql

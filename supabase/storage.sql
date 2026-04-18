@@ -1,6 +1,7 @@
 -- =============================================================================
 -- Supabase Storage: book_images bucket for Shelve (책 꽂기)
--- Run this in Supabase SQL Editor after schema.sql
+-- Run this in Supabase SQL Editor after schema.sql.
+-- Incremental migration 20250223220000_add_avatars_bucket.sql is merged here.
 -- =============================================================================
 
 -- Create bucket (skip if already exists via Dashboard)

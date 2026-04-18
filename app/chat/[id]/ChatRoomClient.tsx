@@ -487,10 +487,19 @@ export default function ChatRoomClient({
 	const [actionBusy, setActionBusy] = useState(false);
 	const [appointmentLocal, setAppointmentLocal] = useState("");
 
-	const endRef = useRef<HTMLDivElement>(null);
+	const scrollContainerRef = useRef<HTMLDivElement>(null);
 	/** Latest messages for polling (avoids stale closures). */
 	const messagesRef = useRef<ChatUiMessage[]>(initialMessages);
 	messagesRef.current = messages;
+
+	const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
+		const el = scrollContainerRef.current;
+		if (!el) return;
+		el.scrollTo({
+			top: el.scrollHeight,
+			behavior,
+		});
+	}, []);
 
 	const headerBookIdsRef = useRef({
 		postId: postBook.id,
@@ -551,8 +560,8 @@ export default function ChatRoomClient({
 	}, [displayAppointmentIso]);
 
 	useLayoutEffect(() => {
-		endRef.current?.scrollIntoView({ behavior: "smooth" });
-	}, [messages]);
+		scrollToBottom("smooth");
+	}, [messages, scrollToBottom]);
 
 	useEffect(() => {
 		const supabase = createClient();
@@ -608,8 +617,10 @@ export default function ChatRoomClient({
 			if (cancelled || !session?.user) return;
 
 			// Wide-open messages INSERTs (filter in JS). Room row UPDATEs use server filter.
+			// Unique topic per mount avoids StrictMode double-subscribe collisions on cleanup delay.
+			const channelName = `room_${roomId}_${Date.now()}`;
 			const ch = supabase
-				.channel(`chat-room-${roomId}`)
+				.channel(channelName)
 				.on(
 					"postgres_changes",
 					{
@@ -706,24 +717,16 @@ export default function ChatRoomClient({
 				)
 				.subscribe((status, err) => {
 					if (status === "SUBSCRIBED") {
-						console.log(
-							"🔥 Realtime subscribed:",
-							`chat-room-${roomId}`,
-						);
-					} else if (status === "CLOSED") {
-						console.log(
-							"🔥 Realtime channel closed:",
-							`chat-room-${roomId}`,
-						);
-					} else if (
+						console.log("🔥 Realtime subscribed:", channelName);
+						return;
+					}
+					if (
 						status === "CHANNEL_ERROR" ||
+						status === "CLOSED" ||
 						status === "TIMED_OUT"
 					) {
-						console.error(
-							"🔥 Realtime channel error:",
-							status,
-							err,
-						);
+						console.warn("🔥 Realtime channel status:", status, err);
+						return;
 					}
 				});
 
@@ -951,10 +954,64 @@ export default function ChatRoomClient({
 		return () => window.clearTimeout(t);
 	}, [roomId, lastMessageId, userHasLeft]);
 
+	useEffect(() => {
+		// 1. Save original styles
+		const originalBodyStyle = document.body.style.cssText;
+		const originalHtmlStyle = document.documentElement.style.cssText;
+
+		// 2. Aggressively lock the HTML and Body to prevent panning
+		document.documentElement.style.cssText =
+			"height: 100%; overflow: hidden; touch-action: none;";
+		document.body.style.cssText =
+			"position: fixed; top: 0; left: 0; right: 0; bottom: 0; height: 100%; overflow: hidden; touch-action: none; overscroll-behavior: none;";
+
+		let scrollToBottomTimeoutId: ReturnType<typeof setTimeout> | null = null;
+
+		const handleResize = () => {
+			if (!window.visualViewport) return;
+			document.documentElement.style.setProperty(
+				"--vv-height",
+				`${window.visualViewport.height}px`,
+			);
+			window.scrollTo(0, 0);
+
+			if (scrollToBottomTimeoutId !== null) {
+				clearTimeout(scrollToBottomTimeoutId);
+			}
+			scrollToBottomTimeoutId = setTimeout(() => {
+				scrollToBottomTimeoutId = null;
+				scrollToBottom("auto");
+			}, 150);
+		};
+
+		if (window.visualViewport) {
+			window.visualViewport.addEventListener("resize", handleResize);
+			window.visualViewport.addEventListener("scroll", handleResize);
+			handleResize();
+		}
+
+		return () => {
+			if (scrollToBottomTimeoutId !== null) {
+				clearTimeout(scrollToBottomTimeoutId);
+			}
+			if (window.visualViewport) {
+				window.visualViewport.removeEventListener("resize", handleResize);
+				window.visualViewport.removeEventListener("scroll", handleResize);
+			}
+			// 4. Restore everything when leaving the chat room
+			document.documentElement.style.cssText = originalHtmlStyle;
+			document.body.style.cssText = originalBodyStyle;
+			document.documentElement.style.removeProperty("--vv-height");
+		};
+	}, [scrollToBottom]);
+
 	return (
-		<div className="flex min-h-screen flex-col bg-background">
+		<div
+			className="absolute top-0 left-0 w-full flex flex-col bg-background overflow-hidden overscroll-none"
+			style={{ height: "var(--vv-height, 100%)" }}
+		>
 			<header
-				className="sticky top-0 z-40 border-b border-primary/15 bg-glass-bg/95 px-3 py-2 shadow-sm backdrop-blur-md"
+				className="flex-none z-50 w-full bg-background px-3 py-2"
 				style={{
 					paddingTop: "max(0.5rem, env(safe-area-inset-top))",
 				}}
@@ -1013,9 +1070,8 @@ export default function ChatRoomClient({
 			</header>
 
 			<main
-				className={`mx-auto flex w-full max-w-lg flex-1 flex-col gap-3 overflow-y-auto px-4 py-4 ${
-					userHasLeft ? "pb-8" : roomClosed ? "pb-28" : "pb-36"
-				}`}
+				ref={scrollContainerRef}
+				className="mx-auto flex min-h-0 w-full max-w-lg flex-1 flex-col gap-3 overflow-y-auto overscroll-y-contain px-4 py-4"
 			>
 				{errorHint ? (
 					<p className="rounded-lg bg-destructive/10 px-3 py-2 text-center text-xs text-destructive">
@@ -1067,17 +1123,11 @@ export default function ChatRoomClient({
 						/>
 					);
 				})}
-				<div ref={endRef} aria-hidden />
+				<div aria-hidden />
 			</main>
 
 			{!userHasLeft ? (
-				<div
-					className="fixed bottom-0 left-0 right-0 z-40 border-t border-primary/15 bg-glass-bg/95 px-3 py-2 backdrop-blur-md"
-					style={{
-						paddingBottom:
-							"max(0.75rem, env(safe-area-inset-bottom))",
-					}}
-				>
+				<div className="flex-none w-full bg-background p-3">
 					<div className="mx-auto flex max-w-lg items-center gap-2">
 						<button
 							type="button"
@@ -1103,7 +1153,7 @@ export default function ChatRoomClient({
 										}
 									}}
 									placeholder="메시지를 입력하세요"
-									className="min-h-[2.25rem] min-w-0 flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+									className="min-h-[2.25rem] min-w-0 flex-1 bg-transparent text-base text-foreground placeholder:text-muted-foreground focus:outline-none"
 								/>
 								<button
 									type="button"
