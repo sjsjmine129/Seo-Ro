@@ -224,7 +224,9 @@ export default function SearchPage() {
 
 				const pattern = `%${trimmed}%`;
 
-				const { data: { user } } = await supabase.auth.getUser();
+				const {
+					data: { user },
+				} = await supabase.auth.getUser();
 				let interestedLibraryIds = new Set<string>();
 				if (user) {
 					const { data: libData } = await supabase
@@ -286,7 +288,8 @@ export default function SearchPage() {
 					}
 				}
 
-				const hasAvailable = available.length > 0 || availableOther.length > 0;
+				const hasAvailable =
+					available.length > 0 || availableOther.length > 0;
 				const sorted = [
 					...available,
 					...availableOther,
@@ -471,9 +474,7 @@ export default function SearchPage() {
 	const showLibraryResults = isLibraryTab && hasActiveLibrarySearch;
 	const showBookResults = !isLibraryTab && hasActiveBookSearch;
 	const libraryResultsEmpty =
-		showLibraryResults &&
-		libraryResults.length === 0 &&
-		!isLoading;
+		showLibraryResults && libraryResults.length === 0 && !isLoading;
 	const bookResultsEmpty =
 		showBookResults && bookResults.length === 0 && !isLoading;
 	const showLibraryInitialGuide = isLibraryTab && !hasActiveLibrarySearch;
@@ -661,7 +662,9 @@ export default function SearchPage() {
 									thumbnailUrl={book.thumbnail_url}
 									condition={book.condition}
 									libraryName={book.libraryName}
-									isInterestedLibrary={book.isInterestedLibrary}
+									isInterestedLibrary={
+										book.isInterestedLibrary
+									}
 									isSwapped={
 										book.status === "SWAPPED" ||
 										book.status === "SWAPPING"
@@ -717,7 +720,7 @@ export default function SearchPage() {
 						{searchInputGuide.shouldShow ? (
 							<OnboardingTooltip
 								message="집 주변이나 자주 가는 도서관을 등록하고 이웃과 연결되어 보세요."
-								position="top"
+								position="bottom"
 								align="center"
 								onClose={() => {
 									searchInputGuide.markAsSeen();
