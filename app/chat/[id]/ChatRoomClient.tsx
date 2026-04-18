@@ -21,7 +21,9 @@ import {
 	Send,
 } from "lucide-react";
 import BottomSheetModal from "@/components/BottomSheetModal";
+import OnboardingTooltip from "@/components/OnboardingTooltip";
 import { createClient } from "@/utils/supabase/client";
+import { useOnboarding } from "@/hooks/useOnboarding";
 import { rowToUiMessage } from "@/lib/chat/parseChatMessage";
 import type {
 	ChatBookPreview,
@@ -460,9 +462,32 @@ export default function ChatRoomClient({
 	const [leftByUserIds, setLeftByUserIds] = useState<string[]>(
 		initialLeftByUserIds,
 	);
+	/** Latest `chat_rooms` row from Realtime (header); cleared on room change / local accept. */
+	const [room, setRoom] = useState<Record<string, unknown> | null>(null);
+
+	const effectiveRoomStatus = useMemo(
+		() =>
+			(room?.status as ChatRoomStatus | undefined) ?? roomStatus,
+		[room, roomStatus],
+	);
+
+	const effectiveAgreedAppointmentAt = useMemo(() => {
+		const ra = room?.appointment_at;
+		if (ra != null && String(ra).trim() !== "") return String(ra);
+		return agreedAppointmentAt;
+	}, [room, agreedAppointmentAt]);
+
+	const effectiveLeftByUserIds = useMemo(
+		() =>
+			(Array.isArray(room?.left_by_user_ids)
+				? (room.left_by_user_ids as string[])
+				: null) ?? leftByUserIds,
+		[room, leftByUserIds],
+	);
+
 	const userHasLeft = useMemo(
-		() => leftByUserIds.includes(currentUserId),
-		[leftByUserIds, currentUserId],
+		() => effectiveLeftByUserIds.includes(currentUserId),
+		[effectiveLeftByUserIds, currentUserId],
 	);
 	const [appointmentPendingId, setAppointmentPendingId] = useState<
 		string | null
@@ -486,6 +511,7 @@ export default function ChatRoomClient({
 	const [loadingCandidates, setLoadingCandidates] = useState(false);
 	const [actionBusy, setActionBusy] = useState(false);
 	const [appointmentLocal, setAppointmentLocal] = useState("");
+	const chatFeaturesGuide = useOnboarding("chat_features");
 
 	const scrollContainerRef = useRef<HTMLDivElement>(null);
 	/** Latest messages for polling (avoids stale closures). */
@@ -520,6 +546,7 @@ export default function ChatRoomClient({
 		setAgreedAppointmentAt(initialAppointmentAt);
 		setOfferBook(initialOfferBook);
 		setLeftByUserIds(initialLeftByUserIds);
+		setRoom(null);
 		// eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: only reset when navigating to another room
 	}, [roomId]);
 
@@ -537,17 +564,17 @@ export default function ChatRoomClient({
 
 	const offerChipChangeDisabled = useMemo(
 		() =>
-			roomStatus === "COMPLETED" ||
-			roomStatus === "APPOINTMENT_SET" ||
+			effectiveRoomStatus === "COMPLETED" ||
+			effectiveRoomStatus === "APPOINTMENT_SET" ||
 			unansweredAppointment,
-		[roomStatus, unansweredAppointment],
+		[effectiveRoomStatus, unansweredAppointment],
 	);
 
 	const displayAppointmentIso = useMemo(() => {
-		if (roomStatus !== "APPOINTMENT_SET") return null;
-		if (agreedAppointmentAt) return agreedAppointmentAt;
+		if (effectiveRoomStatus !== "APPOINTMENT_SET") return null;
+		if (effectiveAgreedAppointmentAt) return effectiveAgreedAppointmentAt;
 		return extractAgreedMeetIsoFromMessages(messages);
-	}, [roomStatus, agreedAppointmentAt, messages]);
+	}, [effectiveRoomStatus, effectiveAgreedAppointmentAt, messages]);
 
 	const appointmentHeaderLabel = useMemo(() => {
 		if (!displayAppointmentIso) return null;
@@ -648,12 +675,14 @@ export default function ChatRoomClient({
 						event: "UPDATE",
 						schema: "public",
 						table: "chat_rooms",
-						filter: `id=eq.${roomId}`,
 					},
 					(payload) => {
-						console.log("🔥 [chat_rooms UPDATE]:", payload);
 						const row = payload.new as Record<string, unknown>;
-						if (!row || String(row.id ?? "") !== roomId) return;
+						if (!row?.id || String(row.id) !== String(roomId)) {
+							return;
+						}
+						console.log("🔔 [ROOM UPDATE RECEIVED]:", row);
+						setRoom(row);
 
 						if (typeof row.status === "string") {
 							setRoomStatus(row.status as ChatRoomStatus);
@@ -716,8 +745,18 @@ export default function ChatRoomClient({
 					},
 				)
 				.subscribe((status, err) => {
+					console.log(
+						"🔔 [Realtime channel]",
+						channelName,
+						"status:",
+						status,
+						err ?? "",
+					);
 					if (status === "SUBSCRIBED") {
-						console.log("🔥 Realtime subscribed:", channelName);
+						console.log(
+							"🔔 [Realtime SUBSCRIBED] messages + chat_rooms on",
+							channelName,
+						);
 						return;
 					}
 					if (
@@ -725,7 +764,7 @@ export default function ChatRoomClient({
 						status === "CLOSED" ||
 						status === "TIMED_OUT"
 					) {
-						console.warn("🔥 Realtime channel status:", status, err);
+						console.warn("🔔 Realtime channel issue:", status, err);
 						return;
 					}
 				});
@@ -870,6 +909,7 @@ export default function ChatRoomClient({
 			try {
 				const { messageRow, nextRoomStatus, appointmentAt } =
 					await acceptAppointment(roomId, messageId);
+				setRoom(null);
 				setRoomStatus(nextRoomStatus);
 				if (appointmentAt) setAgreedAppointmentAt(appointmentAt);
 				const ui = rowToUiMessage(messageRow);
@@ -896,6 +936,7 @@ export default function ChatRoomClient({
 					roomId,
 					messageId,
 				);
+				setRoom(null);
 				setRoomStatus(nextRoomStatus);
 				const ui = rowToUiMessage(messageRow);
 				setMessages((prev) => mergeMessage(prev, ui));
@@ -941,7 +982,7 @@ export default function ChatRoomClient({
 		})();
 	}, [roomId, router]);
 
-	const roomClosed = roomStatus === "COMPLETED";
+	const roomClosed = effectiveRoomStatus === "COMPLETED";
 
 	const lastMessageId = messages[messages.length - 1]?.id ?? "";
 
@@ -1105,7 +1146,7 @@ export default function ChatRoomClient({
 						messages,
 						msgIndex,
 						currentUserId,
-						roomStatus,
+						effectiveRoomStatus,
 					);
 					return (
 						<AppointmentActionCard
@@ -1127,19 +1168,31 @@ export default function ChatRoomClient({
 			</main>
 
 			{!userHasLeft ? (
-				<div className="flex-none w-full bg-background p-3">
-					<div className="mx-auto flex max-w-lg items-center gap-2">
-						<button
-							type="button"
-							className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-primary/25 bg-white/70 text-primary shadow-sm transition-colors hover:bg-white"
-							aria-label="액션 메뉴"
-							onClick={() => {
-								setErrorHint(null);
-								setActionsOpen(true);
-							}}
-						>
-							<Plus className="h-5 w-5" />
-						</button>
+				<div className="flex-none w-full overflow-visible bg-background p-3">
+					<div className="mx-auto flex max-w-lg items-center gap-2 overflow-visible">
+						<div className="relative shrink-0">
+							{chatFeaturesGuide.shouldShow ? (
+								<OnboardingTooltip
+									message="대화 도중 언제든 교환할 책을 변경하거나 약속을 잡을 수 있어요."
+									position="bottom"
+									align="left"
+									onClose={() => {
+										chatFeaturesGuide.markAsSeen();
+									}}
+								/>
+							) : null}
+							<button
+								type="button"
+								className="flex h-11 w-11 items-center justify-center rounded-xl border border-primary/25 bg-white/70 text-primary shadow-sm transition-colors hover:bg-white"
+								aria-label="액션 메뉴"
+								onClick={() => {
+									setErrorHint(null);
+									setActionsOpen(true);
+								}}
+							>
+								<Plus className="h-5 w-5" />
+							</button>
+						</div>
 						{!roomClosed ? (
 							<div className="flex min-w-0 flex-1 items-center gap-2 rounded-2xl border border-primary/20 bg-white/80 px-3 py-2 shadow-inner">
 								<input

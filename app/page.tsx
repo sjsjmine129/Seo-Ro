@@ -2,9 +2,9 @@ import { createClient } from "@/utils/supabase/server";
 import { getUnreadCount } from "@/app/actions/notifications";
 import BottomNav from "@/components/BottomNav";
 import HomePullToRefresh from "@/components/HomePullToRefresh";
-import LibraryFilter from "@/components/LibraryFilter";
+import MainHomeStickyHeader from "@/components/MainHomeStickyHeader";
 import BookCard from "@/components/BookCard";
-import { Bell, Library } from "lucide-react";
+import { Library } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -97,7 +97,7 @@ async function getBooks(
 	);
 
 	const baseSelect =
-		"id, title, authors, thumbnail_url, condition, user_review, users!owner_id(nickname, bookshelf_score)";
+		"id, title, authors, thumbnail_url, condition, user_review, trade_status, users!owner_id(nickname, bookshelf_score)";
 	const libSelect = "book_libraries!inner(library_id, libraries(id, name))";
 
 	let query;
@@ -108,6 +108,7 @@ async function getBooks(
 			.select(`${baseSelect}, ${libSelect}`)
 			.eq("status", "AVAILABLE")
 			.eq("book_libraries.library_id", libraryId)
+			.order("trade_status", { ascending: true })
 			.order("last_bumped_at", { ascending: false });
 	} else if (userLibraryIds.length > 0) {
 		query = supabase
@@ -115,12 +116,14 @@ async function getBooks(
 			.select(`${baseSelect}, ${libSelect}`)
 			.eq("status", "AVAILABLE")
 			.in("book_libraries.library_id", userLibraryIds)
+			.order("trade_status", { ascending: true })
 			.order("last_bumped_at", { ascending: false });
 	} else {
 		query = supabase
 			.from("books")
 			.select(`${baseSelect}, ${libSelect}`)
 			.eq("status", "AVAILABLE")
+			.order("trade_status", { ascending: true })
 			.order("last_bumped_at", { ascending: false });
 	}
 
@@ -198,28 +201,12 @@ export default async function Home({
 		<>
 			<HomePullToRefresh>
 			<main className="flex min-h-screen flex-col px-4 pb-32 pt-4">
-				<div className="sticky top-4 z-40 mb-6 flex w-full items-start justify-between gap-2">
-					<div className="min-w-0 flex-1">
-						<LibraryFilter
-							libraries={libraries}
-							selectedId={selectedId}
-							selectedLibraryName={selectedLibraryName}
-						/>
-					</div>
-					<Link
-						href="/notifications"
-						className="relative mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-primary/20 bg-white/70 text-primary shadow-md backdrop-blur-md transition-colors hover:bg-white/90"
-						aria-label="알림"
-					>
-						<Bell className="h-5 w-5" strokeWidth={2} aria-hidden />
-						{unreadNotificationCount > 0 ? (
-							<span
-								className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full border-2 border-white bg-red-500"
-								aria-hidden
-							/>
-						) : null}
-					</Link>
-				</div>
+				<MainHomeStickyHeader
+					libraries={libraries}
+					selectedId={selectedId}
+					selectedLibraryName={selectedLibraryName}
+					unreadNotificationCount={unreadNotificationCount}
+				/>
 
 				{errorMessage ? (
 					<div className="rounded-2xl border border-red-200 bg-red-50/80 p-4 text-center text-sm text-red-700">
@@ -285,6 +272,10 @@ export default async function Home({
 									libraryName={getLibraryNameFromBook(book)}
 									isInterestedLibrary={isInterested}
 									isSwapped={false}
+									isTrading={
+										(book as { trade_status?: string })
+											.trade_status === "TRADING"
+									}
 								/>
 							);
 						})}
