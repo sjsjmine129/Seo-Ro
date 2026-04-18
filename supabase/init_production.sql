@@ -62,7 +62,7 @@ CREATE TABLE public.users (
 );
 
 COMMENT ON TABLE public.users IS 'User profiles linked to auth.users';
-COMMENT ON COLUMN public.users.bookshelf_score IS 'Score determines max libraries (2~5). Starts at 1.';
+COMMENT ON COLUMN public.users.bookshelf_score IS 'Community score (권). Starts at 1. 관심 도서관 cap is fixed at 8 (see check_user_interested_libraries_max).';
 
 CREATE TABLE public.libraries (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -241,30 +241,15 @@ CREATE INDEX idx_chat_room_reads_user ON public.chat_room_reads (user_id);
 CREATE OR REPLACE FUNCTION public.check_user_interested_libraries_max()
 RETURNS TRIGGER AS $$
 DECLARE
-  current_score INTEGER;
-  max_allowed INTEGER;
+  max_allowed INTEGER := 8;
   current_count INTEGER;
 BEGIN
-  SELECT bookshelf_score INTO current_score
-  FROM public.users
-  WHERE id = NEW.user_id;
-
-  IF current_score < 10 THEN
-    max_allowed := 2;
-  ELSIF current_score < 30 THEN
-    max_allowed := 3;
-  ELSIF current_score < 50 THEN
-    max_allowed := 4;
-  ELSE
-    max_allowed := 5;
-  END IF;
-
   SELECT COUNT(*) INTO current_count
   FROM public.user_interested_libraries
   WHERE user_id = NEW.user_id;
 
   IF current_count >= max_allowed THEN
-    RAISE EXCEPTION 'Limit reached. Your current score (%) allows max % libraries.', current_score, max_allowed;
+    RAISE EXCEPTION '관심 도서관은 최대 8개까지 등록할 수 있습니다.';
   END IF;
 
   RETURN NEW;

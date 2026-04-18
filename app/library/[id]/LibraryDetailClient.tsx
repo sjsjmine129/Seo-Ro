@@ -50,15 +50,19 @@ export default function LibraryDetailClient({
         setInterested(false)
       } else {
         if (userLibraryCount >= maxAllowed) {
-          showToast('관심 도서관이 꽉 찼습니다. 기존 도서관을 삭제하거나 책장 점수를 올려 등록 가능 수를 늘려주세요.')
+          showToast(
+            `관심 도서관은 최대 ${maxAllowed}개까지 등록할 수 있습니다.`,
+          )
           setLoading(false)
           return
         }
         await onAddInterest(library.id)
         setInterested(true)
       }
-    } catch {
-      showToast('요청을 처리할 수 없습니다.')
+    } catch (e) {
+      const msg =
+        e instanceof Error ? e.message : '요청을 처리할 수 없습니다.'
+      showToast(msg)
     } finally {
       setLoading(false)
     }
@@ -81,7 +85,14 @@ export default function LibraryDetailClient({
         <button
           type="button"
           onClick={handleToggle}
-          disabled={loading}
+          disabled={
+            loading || (!interested && userLibraryCount >= maxAllowed)
+          }
+          title={
+            !interested && userLibraryCount >= maxAllowed
+              ? `관심 도서관은 최대 ${maxAllowed}개까지 등록할 수 있습니다.`
+              : undefined
+          }
           className={`flex flex-1 items-center justify-center gap-2 rounded-xl border border-primary/20 py-3 text-sm font-medium shadow-sm backdrop-blur-md transition-opacity hover:opacity-90 disabled:opacity-60 ${
             interested
               ? 'bg-accent/20 text-accent border-accent/30'
