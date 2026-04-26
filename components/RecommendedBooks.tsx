@@ -11,6 +11,10 @@ type Props = {
 	currentBook: CurrentBookForRecommendation;
 };
 
+/**
+ * Horizontal strip matches `app/library/[id]/page.tsx` — "이 도서관에 새로 꽂힌 책":
+ * `-mx-*` + `px-*` on the same scroll row (parent section uses matching horizontal padding).
+ */
 export default async function RecommendedBooks({ currentBook }: Props) {
 	const supabase = await createClient();
 	const books = await getRecommendedBooks(supabase, currentBook);
@@ -26,15 +30,15 @@ export default async function RecommendedBooks({ currentBook }: Props) {
 				이런 책은 어떠세요?
 			</h2>
 			<div
-				className="flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth scroll-pl-3 scroll-pr-3 px-3 pb-4 [-webkit-overflow-scrolling:touch] hide-scrollbar"
+				className="-mx-6 mt-2 flex gap-3 overflow-x-auto px-6 pb-2 [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden"
 			>
 				{books.map((b) => (
 					<Link
 						key={b.id}
 						href={`/book/${b.id}`}
-						className="w-[7.25rem] shrink-0 snap-start"
+						className="flex w-[110px] flex-none flex-col overflow-hidden rounded-xl border border-primary/20 bg-white/90 shadow-sm backdrop-blur-md sm:w-[130px]"
 					>
-						<div className="aspect-[2/3] w-full overflow-hidden rounded-xl border border-primary/20 bg-neutral-200 shadow-sm">
+						<div className="relative aspect-[3/4] w-full bg-neutral-200">
 							{b.thumbnail_url ? (
 								<img
 									src={b.thumbnail_url}
@@ -42,20 +46,22 @@ export default async function RecommendedBooks({ currentBook }: Props) {
 									className="h-full w-full object-cover"
 								/>
 							) : (
-								<div className="flex h-full w-full items-center justify-center bg-white/60">
+								<div className="flex h-full w-full items-center justify-center text-neutral-400">
 									<BookOpen
-										className="h-8 w-8 text-neutral-400"
+										className="h-10 w-10"
 										strokeWidth={1.5}
 									/>
 								</div>
 							)}
 						</div>
-						<p className="mt-2 line-clamp-2 text-xs font-medium leading-snug text-foreground">
-							{b.title}
-						</p>
-						<p className="mt-0.5 line-clamp-1 text-[10px] text-muted-foreground">
-							{b.libraryName}
-						</p>
+						<div className="p-2">
+							<p className="line-clamp-2 text-sm font-medium text-foreground">
+								{b.title}
+							</p>
+							<p className="mt-0.5 truncate text-xs text-foreground/60">
+								{b.libraryName}
+							</p>
+						</div>
 					</Link>
 				))}
 			</div>
