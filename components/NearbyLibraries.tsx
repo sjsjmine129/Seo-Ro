@@ -28,12 +28,14 @@ export default async function NearbyLibraries({ currentLibrary }: Props) {
 			>
 				근처의 다른 도서관
 			</h2>
-			<div className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-4 pb-4 [-webkit-overflow-scrolling:touch] hide-scrollbar">
+			<div
+				className="-mx-4 mt-2 flex gap-3 overflow-x-auto px-0 pb-2 after:block after:w-4 after:shrink-0 after:content-[''] [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden"
+			>
 				{libraries.map((lib) => (
 					<Link
 						key={lib.id}
 						href={`/library/${lib.id}`}
-						className="flex w-[14rem] shrink-0 snap-start flex-col gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-opacity hover:opacity-90"
+						className="flex w-[14rem] shrink-0 flex-col gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-opacity first:ml-4 hover:opacity-90"
 					>
 						<div className="min-w-0">
 							<p className="line-clamp-2 text-sm font-medium text-foreground">

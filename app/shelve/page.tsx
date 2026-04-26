@@ -15,7 +15,6 @@ import {
 } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import BackButton from "@/components/BackButton";
-import BarcodeScanner from "./components/BarcodeScanner";
 import {
 	searchNaverBook,
 	getLibraryById,
@@ -95,7 +94,6 @@ export default function ShelvePage() {
 	const [manualTitle, setManualTitle] = useState("");
 	const [manualAuthor, setManualAuthor] = useState("");
 	const [manualPublisher, setManualPublisher] = useState("");
-	const [showBarcode, setShowBarcode] = useState(false);
 	const [librarySearchQuery, setLibrarySearchQuery] = useState("");
 	const [librarySearchResults, setLibrarySearchResults] = useState<
 		LibraryInfo[]
@@ -167,33 +165,6 @@ export default function ShelvePage() {
 		}));
 		setStep(2);
 	}, []);
-
-	const handleBarcodeResult = useCallback(
-		(isbn: string) => {
-			setShowBarcode(false);
-			setError(null);
-			void searchNaverBook(isbn)
-				.then((results) => {
-					if (results.length > 0) {
-						handleSelectBook(results[0]);
-					} else {
-						setForm((prev) => ({
-							...prev,
-							book: { ...prev.book, isbn },
-						}));
-						setShowManualEntry(true);
-					}
-				})
-				.catch((err) => {
-					setError(
-						err instanceof Error
-							? err.message
-							: "바코드 검색 중 오류가 발생했습니다.",
-					);
-				});
-		},
-		[handleSelectBook],
-	);
 
 	const handleManualSubmit = useCallback(() => {
 		if (!manualTitle.trim()) return;
@@ -410,9 +381,6 @@ export default function ShelvePage() {
 		}
 	}, [form, canSubmit, router]);
 
-	const hasCamera =
-		typeof window !== "undefined" && "mediaDevices" in navigator;
-
 	return (
 		<>
 			<div className="relative mx-auto flex min-h-screen max-w-lg flex-col pb-40">
@@ -468,16 +436,6 @@ export default function ShelvePage() {
 								</div>
 
 								<div className="flex flex-wrap gap-2">
-									{hasCamera && (
-										<button
-											type="button"
-											onClick={() => setShowBarcode(true)}
-											className="flex items-center gap-2 rounded-xl border border-primary/20 bg-white/70 px-4 py-2.5 text-sm font-medium backdrop-blur-md transition-opacity hover:bg-white/90"
-										>
-											<Camera className="h-4 w-4" />
-											바코드 스캔
-										</button>
-									)}
 									<button
 										type="button"
 										onClick={() => setShowManualEntry(true)}
@@ -920,13 +878,6 @@ export default function ShelvePage() {
 					)}
 				</main>
 			</div>
-
-			{showBarcode && (
-				<BarcodeScanner
-					onResult={handleBarcodeResult}
-					onClose={() => setShowBarcode(false)}
-				/>
-			)}
 
 			<BottomNav />
 		</>
