@@ -8,7 +8,6 @@ import {
 	Camera,
 	Edit3,
 	BookOpen,
-	ChevronLeft,
 	X,
 	Library,
 	MapPin,
@@ -169,20 +168,32 @@ export default function ShelvePage() {
 		setStep(2);
 	}, []);
 
-	const handleBarcodeResult = useCallback((isbn: string) => {
-		setShowBarcode(false);
-		searchNaverBook(isbn).then((results) => {
-			if (results.length > 0) {
-				handleSelectBook(results[0]);
-			} else {
-				setForm((prev) => ({
-					...prev,
-					book: { ...prev.book, isbn },
-				}));
-				setShowManualEntry(true);
-			}
-		});
-	}, [handleSelectBook]);
+	const handleBarcodeResult = useCallback(
+		(isbn: string) => {
+			setShowBarcode(false);
+			setError(null);
+			void searchNaverBook(isbn)
+				.then((results) => {
+					if (results.length > 0) {
+						handleSelectBook(results[0]);
+					} else {
+						setForm((prev) => ({
+							...prev,
+							book: { ...prev.book, isbn },
+						}));
+						setShowManualEntry(true);
+					}
+				})
+				.catch((err) => {
+					setError(
+						err instanceof Error
+							? err.message
+							: "바코드 검색 중 오류가 발생했습니다.",
+					);
+				});
+		},
+		[handleSelectBook],
+	);
 
 	const handleManualSubmit = useCallback(() => {
 		if (!manualTitle.trim()) return;
@@ -611,7 +622,8 @@ export default function ShelvePage() {
 
 							<div>
 								<h3 className="mb-2 text-sm font-semibold">
-									사진 (1~3장, 필수) ({form.images.length} / 3)
+									사진 (1~3장, 필수) ({form.images.length} /
+									3)
 								</h3>
 								<div className="flex flex-wrap gap-3">
 									{form.images.map((file, i) => (
@@ -661,7 +673,9 @@ export default function ShelvePage() {
 									<button
 										type="button"
 										onClick={() =>
-											setShowConditionHelp((prev) => !prev)
+											setShowConditionHelp(
+												(prev) => !prev,
+											)
 										}
 										className={`rounded-full p-0.5 transition-colors focus:outline-none ${
 											showConditionHelp
@@ -676,18 +690,23 @@ export default function ShelvePage() {
 								{showConditionHelp && (
 									<div
 										className="fixed inset-0 z-[60] bg-black/20"
-										onClick={() => setShowConditionHelp(false)}
+										onClick={() =>
+											setShowConditionHelp(false)
+										}
 									>
 										<div
 											onClick={(e) => e.stopPropagation()}
 											className="absolute left-1/2 top-1/2 z-[61] w-72 max-w-[85vw] -translate-x-1/2 -translate-y-1/2 rounded-xl border border-primary/20 bg-white/95 px-4 py-3 text-xs leading-relaxed text-foreground shadow-lg backdrop-blur-md"
 										>
 											<div className="space-y-1">
-												{CONDITION_OPTIONS.map((opt) => (
-													<p key={opt.value}>
-														{opt.label}: {opt.desc}
-													</p>
-												))}
+												{CONDITION_OPTIONS.map(
+													(opt) => (
+														<p key={opt.value}>
+															{opt.label}:{" "}
+															{opt.desc}
+														</p>
+													),
+												)}
 											</div>
 											<button
 												type="button"
@@ -769,19 +788,10 @@ export default function ShelvePage() {
 					{/* Step 3: Library Selection */}
 					{step === 3 && (
 						<>
-							<button
-								type="button"
-								onClick={() => setStep(2)}
-								className="flex items-center gap-1 text-sm text-foreground/70"
-							>
-								<ChevronLeft className="h-4 w-4" />
-								이전
-							</button>
-
 							<div>
-								<h3 className="mb-2 text-sm font-semibold">
+								<h2 className="mb-4 text-xl font-bold leading-snug text-foreground">
 									꽂을 도서관 (최소 1개)
-								</h3>
+								</h2>
 								<div className="mb-3 flex flex-wrap gap-2">
 									{form.selectedLibraries.map((lib) => (
 										<span

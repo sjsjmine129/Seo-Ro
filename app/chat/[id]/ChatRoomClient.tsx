@@ -1095,12 +1095,8 @@ export default function ChatRoomClient({
 						/>
 					</div>
 					{displayAppointmentIso && appointmentHeaderLabel ? (
-						<div className="flex items-start gap-2 rounded-lg border border-amber-200/70 bg-amber-50/60 px-2.5 py-2 text-xs text-foreground shadow-sm">
-							<CalendarClock
-								className="mt-0.5 h-4 w-4 shrink-0 text-amber-800"
-								aria-hidden
-							/>
-							<p className="min-w-0 leading-snug">
+						<div className="flex w-full min-w-0 items-start gap-1.5 rounded-lg border border-amber-200/70 bg-amber-50/60 px-2.5 py-2 text-foreground shadow-sm">
+							<p className="min-w-0 flex-1 text-xs leading-tight break-keep sm:text-sm">
 								<span aria-hidden>📅 </span>
 								<span className="font-semibold">약속 시간: </span>
 								<span>{appointmentHeaderLabel}</span>
