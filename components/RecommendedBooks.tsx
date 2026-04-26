@@ -26,7 +26,7 @@ export default async function RecommendedBooks({ currentBook }: Props) {
 				이런 책은 어떠세요?
 			</h2>
 			<div
-				className="-mx-6 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-6 pb-4 [-webkit-overflow-scrolling:touch] hide-scrollbar"
+				className="flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth scroll-pl-3 scroll-pr-3 px-3 pb-4 [-webkit-overflow-scrolling:touch] hide-scrollbar"
 			>
 				{books.map((b) => (
 					<Link
