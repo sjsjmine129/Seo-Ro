@@ -244,13 +244,15 @@ CREATE OR REPLACE FUNCTION public.check_user_interested_libraries_max()
 RETURNS TRIGGER AS $$
 DECLARE
   max_allowed INTEGER := 8;
-  current_count INTEGER;
+  v_row_count INTEGER;
 BEGIN
-  SELECT COUNT(*) INTO current_count
-  FROM public.user_interested_libraries
-  WHERE user_id = NEW.user_id;
+  v_row_count := (
+    SELECT COUNT(*)::INTEGER
+    FROM public.user_interested_libraries
+    WHERE user_id = NEW.user_id
+  );
 
-  IF current_count >= max_allowed THEN
+  IF COALESCE(v_row_count, 0) >= max_allowed THEN
     RAISE EXCEPTION '관심 도서관은 최대 8개까지 등록할 수 있습니다.';
   END IF;
 
